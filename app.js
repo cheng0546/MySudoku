@@ -44,6 +44,15 @@
     render();
   }
 
+  const isPeer = (a, b) =>
+    a !== b && (Math.floor(a / 9) === Math.floor(b / 9) || a % 9 === b % 9 ||
+      (Math.floor(a / 27) === Math.floor(b / 27) && Math.floor((a % 9) / 3) === Math.floor((b % 9) / 3)));
+
+  function hasConflict(i) {
+    const v = cells[i].value;
+    return !!v && cells.some((c, j) => c.value === v && isPeer(i, j));
+  }
+
   function render() {
     const board = $("board");
     board.innerHTML = "";
@@ -51,6 +60,7 @@
     cells.forEach((c, i) => {
       const el = document.createElement("div");
       el.className = "cell";
+      if (hasConflict(i)) el.classList.add("conflict");
       if (puzzle[i]) el.classList.add("given");
       else if (c.value) el.classList.add("user");
       if (selected >= 0) {
@@ -85,6 +95,9 @@
       pushHistory();
       c.value = d;
       c.notes = []; // 填入确定数字后清除该格所有待定数字
+      cells.forEach((p, j) => {
+        if (isPeer(selected, j)) p.notes = p.notes.filter((n) => n !== d);
+      });
     } else {
       if (c.value) return; // 已有确定数字时不能填待定数字
       pushHistory();
