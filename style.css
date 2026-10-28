@@ -1,5 +1,5 @@
 * { box-sizing: border-box; }
-body { margin: 0; font-family: "Microsoft YaHei", system-ui, sans-serif; background: #f2f5fa; color: #222; }
+body { margin: 0; font-family: "Microsoft YaHei", system-ui, sans-serif; background: #f2f5fa; color: #222; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 main { max-width: 520px; margin: 0 auto; padding: 16px; }
 .screen { text-align: center; }
 [hidden] { display: none !important; }
@@ -52,3 +52,11 @@ h1 { margin-top: 15vh; font-size: 2.4rem; }
 
 .tip { color: #667; font-size: .9rem; line-height: 1.6; margin: 8px 0; }
 #board { touch-action: manipulation; -webkit-touch-callout: none; }
+
+/* 游戏界面自适应：占满屏幕高度，棋盘在剩余空间内居中，操作区贴底 */
+main { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+.screen:not([hidden]) { flex: 1; }
+#game:not([hidden]) { display: flex; flex-direction: column; }
+#game #board { width: min(100%, calc(100dvh - 330px)); min-width: 240px; margin: auto; }
+#game .pad .btn { padding: clamp(10px, 2.4dvh, 18px) 0; }
+#game .actions { margin-bottom: 0; }
