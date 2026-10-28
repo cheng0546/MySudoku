@@ -15,6 +15,7 @@ I18n.add("zh", {
   "game.back": "← 返回",
   "game.hint": "💡 提示",
   "game.tip": "点击格子标记待定数字，长按格子填入数字",
+  "game.highlight": "选中数字时标出不能再填的位置",
   "game.undo": "撤销",
   "game.clearCell": "清除此格",
   "game.clearAll": "重新开始",

@@ -24,6 +24,7 @@ I18n.add("fr", {
   "game.back": "← Retour",
   "game.hint": "💡 Indice",
   "game.tip": "Touchez une case pour noter des candidats ; appuyez longuement pour placer un chiffre",
+  "game.highlight": "Surligner les cases bloquées par le chiffre choisi",
   "game.undo": "Annuler",
   "game.clearCell": "Effacer la case",
   "game.clearAll": "Recommencer",
