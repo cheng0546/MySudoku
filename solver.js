@@ -21,7 +21,12 @@ const SudokuSolver = (() => {
     x_chain:           { name: "X-Chain 单数链", nameEn: "X-Chain",        tier: 4, score: 21 },
     xy_chain:          { name: "XY-Chain",   nameEn: "XY-Chain",          tier: 4, score: 22 },
     jellyfish:         { name: "Jellyfish",  nameEn: "Jellyfish",         tier: 4, score: 25 },
+    x_cycle:           { name: "X-Cycle 连续环", nameEn: "X-Cycle",       tier: 4, score: 23 },
+    sue_de_coq:        { name: "Sue de Coq", nameEn: "Sue de Coq",        tier: 4, score: 27 },
+    als_xz:            { name: "ALS-XZ",     nameEn: "ALS-XZ",            tier: 4, score: 28 },
     aic:               { name: "交替推理链 AIC", nameEn: "Alternating Inference Chain", tier: 4, score: 26 },
+    grouped_aic:       { name: "分组链 Grouped AIC", nameEn: "Grouped AIC", tier: 4, score: 29 },
+    forcing_chain:     { name: "强制链 Forcing Chain", nameEn: "Forcing Chain", tier: 4, score: 32 },
   };
 
   // 技巧教学文本（展示用，可后续做多语言）
@@ -116,6 +121,31 @@ const SudokuSolver = (() => {
       how: "强链：两个候选数必有一个为真（双候选格里的两个数，或单元里只剩两个位置的数字）。弱链：两个候选数最多一个为真（同格不同数，或同单元同数字）。从某候选数开始“强-弱-强……”交替延伸，末端同样是强链。X-Chain 和 XY-Chain 都是 AIC 的特例。",
       example: "R1C1(3)=R1C1(7) – R1C5(7)=R6C5(7) – R6C5(3)=R6C9(3)：两端都是数字 3，至少一个为真，所以 R1C9 的 3 可排除。",
     },
+    x_cycle: {
+      summary: "单一数字的强弱链首尾相接成一个闭合的环。环上每条弱链都等价于强链，所以同时看到弱链两端的格子不能是该数字。",
+      how: "选数字 X，找一条强-弱-强-弱……的链，最后一条弱链把链尾接回链头（环上节点数为偶数）。环只有两种填法：奇数位全是 X，或偶数位全是 X。无论哪种，每对相邻节点恰有一个是 X，所以能同时看到相邻两节点的其他格子划掉 X。",
+      example: "数字 7 在四个格组成强弱交替的环，环外同时看到某相邻两格的格子不能是 7。",
+    },
+    grouped_aic: {
+      summary: "AIC 的升级版：链上的节点可以是“同一行/列与同一宫交叉区内的几个格”（分组节点），表示该数字在这几格之一。",
+      how: "例如数字 4 在某宫只剩同一行的两个格，这两格合起来当作一个节点。单元内候选位置被切成恰好两部分时，两部分构成强链；与分组节点所有格都互相看到的格子构成弱链。其余推理与 AIC 完全相同。",
+      example: "宫 1 里 4 只剩 R1C1、R1C2（分组节点）；第 1 行其余位置的 4 与该分组构成弱链，从而把本来无法连接的强链连起来。",
+    },
+    als_xz: {
+      summary: "ALS（几乎锁定集）是同一单元里 n 个格、共 n+1 个候选数的格子集合。两个 ALS 通过“限制数字”X 关联，可以排除它们共有的另一个数字 Z。",
+      how: "找两个互不重叠的 ALS：A、B。若两者都含 X，且 A 中所有含 X 的格与 B 中所有含 X 的格两两互相看到（X 是限制数字），那么 A、B 至多一边含 X。另一边失去 X 后变成 n 格装 n 个数字，必然含有另一个共有数字 Z。因此同时看到 A、B 中所有 Z 的格子不能是 Z。",
+      example: "A={R1C1(1,2)}（双候选格），B={R1C5,R1C8(1,3,4 共三个数两个格)}，X=1 是限制数字，共有数字 Z=2 或 3 可被排除。",
+    },
+    sue_de_coq: {
+      summary: "行（列）与宫的交叉区 2～3 个格拥有多于格数的候选数。再从该行（列）和该宫的其余格各找一组，把交叉区的数字“分摊”后，可排除很多候选数。",
+      how: "设交叉区 I（候选数并集 V）。在行内交叉区之外找格子组 A，在宫内交叉区之外找格子组 C，A、C 的候选数都属于 V 且互不相同，并且 I、A、C 的格子总数等于 V 的数字个数。于是这些格恰好装下 V 的所有数字：A 的数字只能在 I 或 A，C 的数字只能在 I 或 C，其余数字只能在 I。对应的单元其他格可划掉这些数字。",
+      example: "交叉区 R1C1、R1C2 含 {1,2,3,4}，A={R1C5(1,2)}，C={R2C1(3,4)}：4 个格装 1234，则第 1 行其他格不能是 1、2。",
+    },
+    forcing_chain: {
+      summary: "做出假设，沿着“唯一候选数、唯一位置”一路推下去。若各种假设都得到同一个结论，或其他假设都导致矛盾，这个结论就一定成立。",
+      how: "选一个“必有一个成立”的集合：双候选格的两个数，或某单元里某数字仅剩 2～3 个位置。逐个假设，用唯一候选数和唯一位置推导。假设导致矛盾就排除；剩下的假设如果得出同一个格子的同一个数，或同一个候选数都被排除，就可以直接采用。",
+      example: "R1C1 是 {3,5}：假设 3 时 R4C7 被推为 8；假设 5 时 R4C7 也被推为 8，所以 R4C7 就是 8。",
+    },
   };
 
   // 难度配置：分数阈值、目标提示数范围、生成限制。
@@ -195,7 +225,13 @@ const SudokuSolver = (() => {
   // 排除操作只包含当前确实存在的候选数，保证每次操作都有实际进展。
   const place = (cell, value, reason) => ({ action: "place", cell, value, cells: [cell], values: [value], reason });
   function eliminate(s, pairs, cells, values, reason) {
-    const elims = pairs.filter(([c, d]) => s.cands[c] & (1 << d));
+    const seenPair = new Set();
+    const elims = pairs.filter(([c, d]) => {
+      const k = c * 10 + d;
+      if (seenPair.has(k) || !(s.cands[c] & (1 << d))) return false;
+      seenPair.add(k);
+      return true;
+    });
     return elims.length ? { action: "eliminate", elims, cells, values, reason } : null;
   }
 
@@ -335,6 +371,11 @@ const SudokuSolver = (() => {
     xy_chain: (s) => chainSearch(s, "xy"),
     x_chain: (s) => chainSearch(s, "x"),
     aic: (s) => chainSearch(s, "aic"),
+    x_cycle: (s) => chainSearch(s, "xcycle"),
+    grouped_aic: groupedSearch,
+    als_xz: alsXZ,
+    sue_de_coq: sueDeCoq,
+    forcing_chain: forcingChain,
   };
 
   const rcText = (i) => `R${rowOf(i) + 1}C${colOf(i) + 1}`;
@@ -542,7 +583,7 @@ const SudokuSolver = (() => {
   function chainSearch(s, mode) {
     const has = (n) => !s.values[nodeCell(n)] && (s.cands[nodeCell(n)] & (1 << nodeDigit(n))) !== 0;
     const strong = Array.from({ length: 729 }, () => []);
-    const useCell = mode !== "x", useUnit = mode !== "xy";
+    const useCell = mode !== "x" && mode !== "xcycle", useUnit = mode !== "xy";
     if (useCell) {
       for (let c = 0; c < 81; c++) {
         if (s.values[c] || POP[s.cands[c]] !== 2) continue;
@@ -595,6 +636,24 @@ const SudokuSolver = (() => {
             for (let k = key; k !== -1; k = parent[k]) path.push(k >> 1);
             path.reverse();
             if (new Set(path).size !== path.length) continue;
+            if (mode === "xcycle") {
+              // 连续环：链尾与链头再用弱链闭合，环上每条弱链都等价于强链（两端恰有一个为真）
+              if (!isWeak(m, n0)) continue;
+              const d = nodeDigit(n0), inLoop = new Set(path.map(nodeCell));
+              const pairs = [];
+              for (let i = 1; i < path.length; i += 2) pairs.push([path[i], path[(i + 1) % path.length]]);
+              const loopTargets = [];
+              for (const [a, b] of pairs) {
+                for (let c = 0; c < 81; c++) {
+                  if (!inLoop.has(c) && cellHas(s, c, d) && SEES[c][nodeCell(a)] && SEES[c][nodeCell(b)]) loopTargets.push([c, d]);
+                }
+              }
+              const loopText = path.map((x, i) => (i ? (i % 2 ? " = " : " – ") : "") + nodeText(x)).join("") + ` – ${nodeText(n0)}`;
+              const lr = eliminate(s, loopTargets, [...inLoop], [d],
+                `X-Cycle 连续环：${loopText}。环上强弱链交替，每条弱链都等价于强链（两端恰有一个是 ${d}），因此同时看到某条弱链两端的格子不能是 ${d}`);
+              if (lr) return Object.assign(lr, { chain: path.map((n) => ({ cells: [nodeCell(n)], value: nodeDigit(n) })) });
+              continue;
+            }
             const targets = [];
             for (const c of weakNbrs(n0)) if (c !== m && isWeak(m, c)) targets.push([nodeCell(c), nodeDigit(c)]);
             if (!targets.length) continue;
@@ -604,11 +663,327 @@ const SudokuSolver = (() => {
             const label = { xy: "XY-Chain", x: "X-Chain", aic: "AIC" }[mode];
             const r = eliminate(s, targets, cells, values,
               `${label}：${chainText}（= 强链，– 弱链）。若 ${nodeText(n0)} 为假则链末端 ${nodeText(m)} 为真，所以两端至少一个为真，与两端都有弱链的候选数可排除`);
-            if (r) return Object.assign(r, { chain: path });
+            if (r) return Object.assign(r, { chain: path.map((n) => ({ cells: [nodeCell(n)], value: nodeDigit(n) })) });
           }
         }
         frontier = next;
       }
+    }
+    return null;
+  }
+
+  // ---------- 分组链（Grouped AIC） ----------
+  // 节点可以是“某数字在同一单元交叉区内的若干格”（分组节点，含义：该数字在这几格之一）。
+  // 强链：单元内该数字的候选位置恰好分成两部分（按宫/行/列切分），两部分必有一个为真。
+  // 弱链：同数字且两节点不相交、且互相能看到对方每一格；或同格不同数字。
+  function groupedSearch(s) {
+    const nodes = [], keyMap = new Map(), strong = [];
+    const getNode = (d, cells) => {
+      const key = d + ":" + cells.join(",");
+      if (!keyMap.has(key)) {
+        keyMap.set(key, nodes.length);
+        nodes.push({ d, cells });
+        strong.push([]);
+      }
+      return keyMap.get(key);
+    };
+    const seen = new Set();
+    const link = (a, b) => {
+      const k = a < b ? a + "," + b : b + "," + a;
+      if (seen.has(k)) return;
+      seen.add(k);
+      strong[a].push(b);
+      strong[b].push(a);
+    };
+    for (let c = 0; c < 81; c++) {
+      if (s.values[c]) continue;
+      for (const d of digitsOf(s.cands[c])) getNode(d, [c]);
+      if (POP[s.cands[c]] === 2) {
+        const [d1, d2] = digitsOf(s.cands[c]);
+        link(getNode(d1, [c]), getNode(d2, [c]));
+      }
+    }
+    const partition = (pos, keyFn) => {
+      const m = new Map();
+      for (const c of pos) {
+        const k = keyFn(c);
+        if (!m.has(k)) m.set(k, []);
+        m.get(k).push(c);
+      }
+      return [...m.values()];
+    };
+    for (let u = 0; u < 27; u++) {
+      for (let d = 1; d <= 9; d++) {
+        const pos = UNITS[u].filter((c) => cellHas(s, c, d));
+        if (pos.length < 2) continue;
+        if (pos.length === 2) link(getNode(d, [pos[0]]), getNode(d, [pos[1]]));
+        const schemes = u < 18 ? [boxOf] : [rowOf, colOf];
+        for (const f of schemes) {
+          const parts = partition(pos, f);
+          if (parts.length === 2) link(getNode(d, parts[0]), getNode(d, parts[1]));
+        }
+      }
+    }
+    const byDigit = Array.from({ length: 10 }, () => []);
+    nodes.forEach((nd, i) => byDigit[nd.d].push(i));
+    const weakBetween = (A, B) => {
+      if (A.d !== B.d) return A.cells.length === 1 && B.cells.length === 1 && A.cells[0] === B.cells[0];
+      for (const a of A.cells) for (const b of B.cells) if (a === b || !SEES[a][b]) return false;
+      return true;
+    };
+    const weakCache = new Map();
+    const weakNbrs = (n) => {
+      if (weakCache.has(n)) return weakCache.get(n);
+      const A = nodes[n], out = [];
+      for (const j of byDigit[A.d]) if (j !== n && weakBetween(A, nodes[j])) out.push(j);
+      if (A.cells.length === 1) {
+        for (const e of digitsOf(s.cands[A.cells[0]])) if (e !== A.d) out.push(keyMap.get(e + ":" + A.cells[0]));
+      }
+      weakCache.set(n, out);
+      return out;
+    };
+    const nText = (n) => `${nodes[n].cells.map(rcText).join("/")}(${nodes[n].d})`;
+
+    const N = nodes.length;
+    const visited = new Int32Array(N * 2), parent = new Int32Array(N * 2);
+    let stamp = 0;
+    for (let n0 = 0; n0 < N; n0++) {
+      if (!strong[n0].length) continue;
+      stamp++;
+      let frontier = [n0 * 2];
+      visited[n0 * 2] = stamp;
+      parent[n0 * 2] = -1;
+      for (let depth = 1; depth < CHAIN_MAX_NODES && frontier.length; depth++) {
+        const next = [];
+        for (const st of frontier) {
+          const n = st >> 1;
+          const nbrs = st & 1 ? weakNbrs(n) : strong[n];
+          const ns = st & 1 ? 0 : 1;
+          for (const m of nbrs) {
+            const key = m * 2 + ns;
+            if (visited[key] === stamp) continue;
+            visited[key] = stamp;
+            parent[key] = st;
+            next.push(key);
+            if (ns !== 1 || m === n0 || depth < 3) continue;
+            const path = [];
+            for (let k = key; k !== -1; k = parent[k]) path.push(k >> 1);
+            path.reverse();
+            if (new Set(path).size !== path.length) continue;
+            if (!path.some((x) => nodes[x].cells.length > 1)) continue;
+            const A = nodes[n0], B = nodes[m], targets = [];
+            for (let c = 0; c < 81; c++) {
+              if (s.values[c]) continue;
+              for (const e of digitsOf(s.cands[c])) {
+                const T = { d: e, cells: [c] };
+                if (weakBetween(T, A) && weakBetween(T, B)) targets.push([c, e]);
+              }
+            }
+            if (!targets.length) continue;
+            const cells = [...new Set(path.flatMap((x) => nodes[x].cells))];
+            const values = [...new Set(path.map((x) => nodes[x].d))];
+            const chainText = path.map((x, i) => (i ? (i % 2 ? " = " : " – ") : "") + nText(x)).join("");
+            const r = eliminate(s, targets, cells, values,
+              `分组链：${chainText}（含多格的分组节点；= 强链，– 弱链）。若 ${nText(n0)} 为假则末端 ${nText(m)} 为真，所以两端至少一个为真，与两端都有弱链的候选数可排除`);
+            if (r) return Object.assign(r, { chain: path.map((x) => ({ cells: nodes[x].cells, value: nodes[x].d })) });
+          }
+        }
+        frontier = next;
+      }
+    }
+    return null;
+  }
+
+  // ---------- ALS-XZ ----------
+  // ALS（几乎锁定集）：同一单元内 n 个格，候选数共 n+1 个。
+  // 两个 ALS 共有“限制数字”X（两边含 X 的格子两两互相看到），X 在两个 ALS 里至多一边为真，
+  // 于是另一边变成 n 个格装 n 个数字的锁定集，必含另一共有数字 Z。同时看到两边所有 Z 的格子排除 Z。
+  function findALSList(s) {
+    const list = [], seen = new Set();
+    for (let u = 0; u < 27; u++) {
+      const empties = UNITS[u].filter((c) => !s.values[c]);
+      for (let n = 1; n <= 4 && n < empties.length; n++) {
+        combos(empties, n, (cs) => {
+          let mask = 0;
+          for (const c of cs) mask |= s.cands[c];
+          if (POP[mask] === n + 1) {
+            const key = cs.join(",");
+            if (!seen.has(key)) { seen.add(key); list.push({ cells: cs.slice(), mask, unit: u }); }
+          }
+          return null;
+        });
+      }
+    }
+    return list;
+  }
+
+  function alsXZ(s) {
+    const list = findALSList(s);
+    for (let i = 0; i < list.length; i++) {
+      for (let j = i + 1; j < list.length; j++) {
+        const A = list[i], B = list[j];
+        const common = A.mask & B.mask;
+        if (POP[common] < 2 || A.cells.some((c) => B.cells.includes(c))) continue;
+        for (const x of digitsOf(common)) {
+          const ax = A.cells.filter((c) => cellHas(s, c, x)), bx = B.cells.filter((c) => cellHas(s, c, x));
+          if (!ax.every((a) => bx.every((b) => SEES[a][b]))) continue;
+          for (const z of digitsOf(common)) {
+            if (z === x) continue;
+            const zc = [...A.cells, ...B.cells].filter((c) => cellHas(s, c, z));
+            const targets = [];
+            for (let c = 0; c < 81; c++) {
+              if (cellHas(s, c, z) && !A.cells.includes(c) && !B.cells.includes(c) && zc.every((q) => SEES[c][q])) targets.push([c, z]);
+            }
+            const r = eliminate(s, targets, [...A.cells, ...B.cells], [x, z],
+              `ALS-XZ：A=${A.cells.map(rcText).join("、")}（${A.cells.length} 格含数字 ${digitsOf(A.mask).join("")}），B=${B.cells.map(rcText).join("、")}（${B.cells.length} 格含数字 ${digitsOf(B.mask).join("")}）。限制数字 ${x}：A、B 中至多一边是 ${x}，另一边成为锁定集，必含 ${z}。同时看到所有 ${z} 的格子排除 ${z}`);
+            if (r) return r;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  // ---------- Sue de Coq ----------
+  // 行/列与宫的交叉区 I（2～3 格，候选并集 V，|V| = |I|+|A|+|C|）。
+  // A 取自该行/列、交叉区之外；C 取自该宫、交叉区之外；A、C 候选数分别 ⊆ V 且互不相同。
+  // 此时 I∪A∪C 的所有格必装下 V 中全部数字：A 的数字只能在 I∪A，C 的数字只能在 I∪C，其余数字只能在 I。
+  function sueDeCoq(s) {
+    for (let L = 0; L < 18; L++) {
+      for (let b = 18; b < 27; b++) {
+        const I = UNITS[L].filter((c) => !s.values[c] && UNITS[b].includes(c));
+        if (I.length < 2) continue;
+        let V = 0;
+        for (const c of I) V |= s.cands[c];
+        if (POP[V] < I.length + 2) continue;
+        const al = UNITS[L].filter((c) => !s.values[c] && !UNITS[b].includes(c));
+        const cl = UNITS[b].filter((c) => !s.values[c] && !UNITS[L].includes(c));
+        const subsets = (arr) => {
+          const out = [];
+          for (let n = 1; n <= 3 && n <= arr.length; n++) {
+            combos(arr, n, (cs) => {
+              let m = 0;
+              for (const c of cs) m |= s.cands[c];
+              if ((m & ~V) === 0) out.push({ cells: cs.slice(), mask: m });
+              return null;
+            });
+          }
+          return out;
+        };
+        const As = subsets(al), Cs = subsets(cl);
+        for (const A of As) {
+          for (const C of Cs) {
+            if ((A.mask & C.mask) !== 0 || I.length + A.cells.length + C.cells.length !== POP[V]) continue;
+            const R = V & ~A.mask & ~C.mask;
+            const inI = new Set([...I]);
+            const targets = [];
+            for (const c of UNITS[L]) {
+              if (inI.has(c) || A.cells.includes(c)) continue;
+              for (const d of digitsOf(A.mask)) targets.push([c, d]);
+              for (const d of digitsOf(R)) targets.push([c, d]);
+            }
+            for (const c of UNITS[b]) {
+              if (inI.has(c) || C.cells.includes(c)) continue;
+              for (const d of digitsOf(C.mask)) targets.push([c, d]);
+              for (const d of digitsOf(R)) targets.push([c, d]);
+            }
+            const r = eliminate(s, targets, [...I, ...A.cells, ...C.cells], digitsOf(V),
+              `Sue de Coq：${unitName(L)}与${unitName(b)}的交叉区 ${I.map(rcText).join("、")} 含数字 ${digitsOf(V).join("")}；` +
+              `A=${A.cells.map(rcText).join("、")}（数字 ${digitsOf(A.mask).join("")}），C=${C.cells.map(rcText).join("、")}（数字 ${digitsOf(C.mask).join("")}）。` +
+              `这 ${POP[V]} 个格恰好装下这 ${POP[V]} 个数字：A 的数字只能在交叉区或 A 内，C 的数字只能在交叉区或 C 内，其余数字只能在交叉区内`);
+            if (r) return r;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  // ---------- 强制链（Forcing Chain） ----------
+  // 对一个“必有一个为真”的假设集合（双候选格的两个数，或单元内某数字仅剩 2～3 个位置），
+  // 分别假设每一种情况并只用唯一候选数/唯一位置向前推导：
+  //  · 只有一种假设不矛盾 → 该假设成立；
+  //  · 各个不矛盾的假设得出相同的结论（同一格填同一数，或同一候选数被排除）→ 该结论成立。
+  function propagateSingles(s, startCell, startDigit) {
+    const v = Uint8Array.from(s.values), c = Uint16Array.from(s.cands);
+    let broken = false;
+    const assign = (cell, d) => {
+      if (v[cell]) return v[cell] === d;
+      if (!(c[cell] & (1 << d))) return false;
+      v[cell] = d;
+      c[cell] = 0;
+      for (const p of PEERS[cell]) {
+        if (v[p] === d) return false;
+        c[p] &= ~(1 << d);
+        if (!v[p] && c[p] === 0) return false;
+      }
+      return true;
+    };
+    if (!assign(startCell, startDigit)) return null;
+    for (let guard = 0; guard < 90 && !broken; guard++) {
+      let progress = false;
+      for (let i = 0; i < 81 && !broken; i++) {
+        if (!v[i] && POP[c[i]] === 1) {
+          if (!assign(i, digitsOf(c[i])[0])) broken = true;
+          progress = true;
+        }
+      }
+      for (let u = 0; u < 27 && !broken; u++) {
+        const unit = UNITS[u];
+        for (let d = 1; d <= 9 && !broken; d++) {
+          if (unit.some((q) => v[q] === d)) continue;
+          let cnt = 0, at = -1;
+          for (const q of unit) if (!v[q] && (c[q] & (1 << d))) { cnt++; at = q; }
+          if (cnt === 0) broken = true;
+          else if (cnt === 1) {
+            if (!assign(at, d)) broken = true;
+            progress = true;
+          }
+        }
+      }
+      if (!progress) break;
+    }
+    return broken ? null : { v, c };
+  }
+
+  function forcingChain(s) {
+    const sources = [];
+    for (let i = 0; i < 81; i++) {
+      if (!s.values[i] && POP[s.cands[i]] === 2) sources.push(digitsOf(s.cands[i]).map((d) => [i, d]));
+    }
+    for (let u = 0; u < 27; u++) {
+      for (let d = 1; d <= 9; d++) {
+        const pos = UNITS[u].filter((c) => cellHas(s, c, d));
+        if (pos.length === 2 || pos.length === 3) sources.push(pos.map((c) => [c, d]));
+      }
+    }
+    const asText = (set) => set.map(([c, d]) => `${rcText(c)}=${d}`).join(" / ");
+    for (const set of sources) {
+      const outs = set.map(([c, d]) => propagateSingles(s, c, d));
+      const alive = outs.filter(Boolean);
+      const cells = [...new Set(set.map(([c]) => c))], values = [...new Set(set.map(([, d]) => d))];
+      if (!alive.length) continue;
+      if (alive.length === 1) {
+        const [c, d] = set[outs.indexOf(alive[0])];
+        return place(c, d, `强制链：${asText(set)} 必有一个成立，其余假设推到矛盾，所以 ${rcText(c)} 填 ${d}`);
+      }
+      for (let i = 0; i < 81; i++) {
+        if (s.values[i]) continue;
+        const val = alive[0].v[i];
+        if (val && alive.every((o) => o.v[i] === val)) {
+          return place(i, val, `强制链：${asText(set)} 必有一个成立；无论哪种假设，只用唯一候选数/唯一位置推下去，${rcText(i)} 都是 ${val}`);
+        }
+      }
+      const targets = [];
+      for (let i = 0; i < 81; i++) {
+        if (s.values[i]) continue;
+        for (const d of digitsOf(s.cands[i])) {
+          if (alive.every((o) => o.v[i] !== d && !(o.c[i] & (1 << d)))) targets.push([i, d]);
+        }
+      }
+      const r = eliminate(s, targets, cells, values,
+        `强制链：${asText(set)} 必有一个成立；无论哪种假设，只用唯一候选数/唯一位置推下去，这些候选数都会被排除`);
+      if (r) return r;
     }
     return null;
   }
@@ -668,7 +1043,7 @@ const SudokuSolver = (() => {
         row: 0, col: 0, value: 0, eliminatedCandidates: [],
         cells: found.cells.map(rc), values: found.values, reason: found.reason,
       };
-      if (found.chain) step.chain = found.chain.map((n) => ({ ...rc(nodeCell(n)), value: nodeDigit(n) }));
+      if (found.chain) step.chain = found.chain.map((n) => ({ cells: n.cells.map(rc), value: n.value }));
       if (found.action === "place") {
         values[found.cell] = found.value;
         cands[found.cell] = 0;
