@@ -843,7 +843,7 @@ const SudokuSolver = (() => {
             }
             const r = eliminate(s, targets, [...A.cells, ...B.cells], [x, z],
               `ALS-XZ：A=${A.cells.map(rcText).join("、")}（${A.cells.length} 格含数字 ${digitsOf(A.mask).join("")}），B=${B.cells.map(rcText).join("、")}（${B.cells.length} 格含数字 ${digitsOf(B.mask).join("")}）。限制数字 ${x}：A、B 中至多一边是 ${x}，另一边成为锁定集，必含 ${z}。同时看到所有 ${z} 的格子排除 ${z}`);
-            if (r) return r;
+            if (r) return Object.assign(r, { chain: [A, B].map((a, k) => ({ cells: a.cells, value: k ? 0 : x })) });
           }
         }
       }
@@ -896,7 +896,7 @@ const SudokuSolver = (() => {
         const text = chain.map((i, k) => `{${list[i].cells.map(rcText).join(" ")}}` + (k < rcc.length ? ` –${rcc[k]}– ` : "")).join("");
         const r = eliminate(s, targets, cells, [...new Set([...rcc, z])],
           `ALS 链：${text}。相邻 ALS 通过限制数字（括号间数字）相连，两端 ALS 必有一个含 ${z}。同时看到两端所有 ${z} 的格子排除 ${z}`);
-        if (r) return r;
+        if (r) return Object.assign(r, { chain: chain.map((i, k) => ({ cells: list[i].cells, value: rcc[k] || 0 })) });
       }
       return null;
     };
@@ -918,7 +918,7 @@ const SudokuSolver = (() => {
       chain.push(i);
       const r = dfs();
       chain.pop();
-      if (r) return Object.assign(r, { chain: null });
+      if (r) return r;
     }
     return null;
   }
