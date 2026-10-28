@@ -16,8 +16,8 @@ h1 { margin-top: 15vh; font-size: 2.4rem; }
 .btn.active { background: #3a6fd8; color: #fff; border-color: #3a6fd8; }
 .levels .btn { padding: 14px; font-size: 1.15rem; }
 
-.board { display: grid; grid-template-columns: repeat(9, 1fr); width: 100%; aspect-ratio: 1; margin: 12px 0; border: 2px solid #222; background: #fff; }
-.cell { position: relative; display: flex; align-items: center; justify-content: center; border: 1px solid #ccd; font-size: clamp(1.1rem, 5vw, 1.8rem); cursor: pointer; user-select: none; }
+.board { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); grid-template-rows: repeat(9, minmax(0, 1fr)); width: 100%; aspect-ratio: 1; margin: 12px 0; border: 2px solid #222; background: #fff; }
+.cell { position: relative; display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 0; overflow: hidden; border: 1px solid #ccd; font-size: clamp(1.1rem, 5vw, 1.8rem); cursor: pointer; user-select: none; }
 .cell:nth-child(9n+3), .cell:nth-child(9n+6) { border-right: 2px solid #222; }
 .cell:nth-child(n+19):nth-child(-n+27), .cell:nth-child(n+46):nth-child(-n+54) { border-bottom: 2px solid #222; }
 .cell.given { font-weight: bold; background: #eef1f6; }
@@ -28,7 +28,7 @@ h1 { margin-top: 15vh; font-size: 2.4rem; }
 .cell.conflict { color: #d00; background: #ffd2d2; }
 .cell.selected.conflict { background: #ff9d9d; }
 .cell.wrong { background: #ffd2d2; color: #c00; }
-.notes { display: grid; grid-template-columns: repeat(3, 1fr); width: 100%; height: 100%; font-size: clamp(.5rem, 2.2vw, .8rem); color: #556; }
+.notes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(3, minmax(0, 1fr)); width: 100%; height: 100%; font-size: clamp(.5rem, 2.2vw, .8rem); line-height: 1; color: #556; }
 .notes span { display: flex; align-items: center; justify-content: center; }
 
 .actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 10px 0; }

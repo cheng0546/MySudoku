@@ -347,8 +347,9 @@
   function placeNote(i, d) {
     const c = cells[i];
     if (puzzle[i] || c.value) return; // 已有确定数字的格子不能填待定数字
-    pushHistory();
     const k = c.notes.indexOf(d);
+    if (k < 0 && cells.some((p, j) => p.value === d && isPeer(i, j))) return; // 同行/列/宫已有该确定数字
+    pushHistory();
     if (k >= 0) c.notes.splice(k, 1);
     else c.notes.push(d);
     c.notes.sort();
