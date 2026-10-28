@@ -381,6 +381,7 @@
 
   function setActiveDigit(d) {
     activeDigit = activeDigit === d ? 0 : d;
+    selected = -1;
     renderPad();
     render();
   }
