@@ -1,10 +1,11 @@
 // 修改缓存文件后请递增版本号，以便客户端更新
-const CACHE = "mysudoku-v7";
+const CACHE = "mysudoku-v8";
 const ASSETS = [
   "./",
   "index.html",
   "style.css",
   "solver.js",
+  "tutorial.js",
   "sudoku.js",
   "app.js",
   "manifest.webmanifest",
