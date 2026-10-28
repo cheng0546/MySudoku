@@ -8,6 +8,9 @@
   let cells = [];      // { value, notes: number[] }
   let selected = -1;
   let activeDigit = 0; // 当前选中的数字（0 表示未选）
+  const HL_KEY = "mysudoku-highlight";
+  let showBlocked = true; // 选中数字时标出不能再填的位置（可在游戏页关闭）
+  try { showBlocked = localStorage.getItem(HL_KEY) !== "0"; } catch (e) { /* 忽略 */ }
   let history = [];
   let analysis = null; // 当前题目的逻辑分析结果（含使用到的技巧）
   let genToken = 0;    // 用于忽略已被取消的生成请求
@@ -313,7 +316,7 @@
     if (activeDigit && cells.filter((c) => c.value === activeDigit).length >= 9) activeDigit = 0;
     const sel = selected >= 0 ? cells[selected] : null;
     const blocked = new Set();
-    if (activeDigit) cells.forEach((c, j) => { if (c.value === activeDigit) cells.forEach((_, i) => { if (i !== j && isPeer(i, j)) blocked.add(i); }); });
+    if (activeDigit && showBlocked) cells.forEach((c, j) => { if (c.value === activeDigit) cells.forEach((_, i) => { if (i !== j && isPeer(i, j)) blocked.add(i); }); });
     cells.forEach((c, i) => {
       const el = document.createElement("div");
       el.className = "cell";
@@ -323,7 +326,7 @@
       if (selected >= 0 && i === selected) el.classList.add("selected");
       else if (activeDigit) {
         if (c.value === activeDigit) el.classList.add("same");
-        else if (blocked.has(i)) el.classList.add("blocked");
+        else if (blocked.has(i) || (showBlocked && c.value)) el.classList.add("blocked");
       } else if (selected >= 0) {
         const r = Math.floor(i / 9), col = i % 9, sr = Math.floor(selected / 9), sc = selected % 9;
         if (c.value && c.value === sel.value) el.classList.add("same");
@@ -378,6 +381,7 @@
 
   function setActiveDigit(d) {
     activeDigit = activeDigit === d ? 0 : d;
+    selected = -1;
     renderPad();
     render();
   }
@@ -557,6 +561,12 @@
   board.addEventListener("pointercancel", cancelPress);
   board.addEventListener("contextmenu", (e) => e.preventDefault());
   $("undo").addEventListener("click", undo);
+  $("hl-toggle").checked = showBlocked;
+  $("hl-toggle").addEventListener("change", (e) => {
+    showBlocked = e.target.checked;
+    try { localStorage.setItem(HL_KEY, showBlocked ? "1" : "0"); } catch (err) { /* 忽略 */ }
+    render();
+  });
   $("clear-cell").addEventListener("click", clearCell);
   $("clear-all").addEventListener("click", clearAll);
   $("submit").addEventListener("click", submit);

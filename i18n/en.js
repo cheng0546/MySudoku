@@ -14,6 +14,7 @@ I18n.add("en", {
   "game.back": "← Back",
   "game.hint": "💡 Hint",
   "game.tip": "Tap a cell to toggle pencil marks; long-press to enter a digit",
+  "game.highlight": "Highlight cells blocked by the selected digit",
   "game.undo": "Undo",
   "game.clearCell": "Clear cell",
   "game.clearAll": "Restart",
