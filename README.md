@@ -4,7 +4,7 @@ A web-based Sudoku game for learning and improving solving techniques. Every puz
 
 ## Features (v1)
 
-- Three difficulty levels: Easy, Medium, Hard
+- Four difficulty levels: Easy, Medium, Hard, Expert
 - Unique-solution 9×9 puzzle generation
 - Two input modes:
   - **Value** – one confirmed number per cell (clears the cell's candidates)
@@ -22,6 +22,21 @@ MySudoku is a Progressive Web App and works offline after the first visit. Over 
 - **iOS Safari**: Share → *Add to Home Screen*.
 
 When you change cached files, bump `CACHE` in `sw.js` so clients pick up the update.
+
+## Difficulty system
+
+Difficulty is determined by a logic solver (`solver.js`), not by the number of clues. Backtracking is only used to build solved grids and check uniqueness; the solver never guesses.
+
+| Tier | Techniques | Result |
+| --- | --- | --- |
+| 1 | Naked Single (1), Hidden Single (2) | Easy |
+| 2 | Locked Candidates (4), Naked Pair (4), Hidden Pair (5), Naked Triple (8) | Medium |
+| 3 | X-Wing (12), XY-Wing (14) | Hard |
+| 4 | XYZ-Wing (18), Swordfish (20), XY-Chain (22) | Expert |
+
+The classification uses the highest tier actually used plus the total score (see `TECHNIQUE_CONFIG` and `DIFFICULTY_CONFIG` in `solver.js`). Puzzles the solver cannot finish are discarded. Generation retries until the target level is met, with attempt and time limits.
+
+Test the generator: `node tools/test-difficulty.js 50`
 
 ## Roadmap
 
@@ -57,6 +72,8 @@ Static sites on Render's free plan are not spun down, so there are no cold start
 | --- | --- |
 | `index.html` | Page structure (home, game, result screens) |
 | `style.css` | Styles |
-| `sudoku.js` | Puzzle generator and unique-solution solver |
+| `solver.js` | Logic solver, technique/difficulty config, difficulty classification |
+| `sudoku.js` | Puzzle generator and unique-solution backtracking solver |
+| `tools/test-difficulty.js` | Node script to test difficulty generation |
 | `app.js` | UI logic and game state |
 | `manifest.webmanifest`, `sw.js`, `icons/` | PWA manifest, service worker (offline cache), app icons |

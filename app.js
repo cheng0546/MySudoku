@@ -1,5 +1,5 @@
 (() => {
-  const LEVEL_NAMES = { easy: "简单", medium: "中等", hard: "困难" };
+  const LEVEL_NAMES = SudokuSolver.DIFFICULTY_CONFIG.names;
   const $ = (id) => document.getElementById(id);
   const screens = { home: $("home"), game: $("game"), result: $("result") };
 
@@ -26,11 +26,19 @@
 
   function startGame(lv) {
     level = lv;
+    $("home-msg").textContent = "";
     $("game-title").textContent = "生成中…";
     show("game");
     // 延迟一帧让界面先刷新，再进行耗时的生成
     setTimeout(() => {
-      ({ puzzle, solution } = SudokuGen.generate(lv));
+      const r = SudokuGen.generatePuzzle(lv);
+      if (!r.ok) {
+        const why = r.reason === "timeout" ? "生成超时" : "多次尝试仍未生成符合要求的题目";
+        $("home-msg").textContent = `${why}（${LEVEL_NAMES[lv]}），请重试或选择其他难度。`;
+        show("home");
+        return;
+      }
+      ({ puzzle, solution } = r);
       resetBoard();
     }, 30);
   }
