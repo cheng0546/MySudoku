@@ -11,9 +11,91 @@
   let history = [];
   let analysis = null; // 当前题目的逻辑分析结果（含使用到的技巧）
   let genToken = 0;    // 用于忽略已被取消的生成请求
+  let saveEnabled = false; // 仅在棋盘进行中时自动保存
   const show = (name) => {
     for (const k in screens) screens[k].hidden = k !== name;
+    if (name === "home") refreshHome();
   };
+
+  // ---------- 本地存档（localStorage，仅保存一局，不含撤销记录） ----------
+  const SAVE_KEY = "mysudoku-save-v1";
+
+  function saveGame() {
+    if (!saveEnabled || !analysis) return;
+    try {
+      const { steps, ...slim } = analysis; // 逐步记录体积大且恢复后不需要
+      localStorage.setItem(SAVE_KEY, JSON.stringify({
+        v: 1, level, puzzle, solution, analysis: slim, cells: cells.map((c) => [c.value, c.notes]),
+      }));
+    } catch (e) { /* 存储被禁用或已满：忽略，不影响游戏 */ }
+  }
+
+  function clearSave() {
+    try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* 忽略 */ }
+  }
+
+  const validGrid = (g) => {
+    for (let u = 0; u < 9; u++) {
+      const r = new Set(), c = new Set(), b = new Set();
+      for (let k = 0; k < 9; k++) {
+        r.add(g[u * 9 + k]);
+        c.add(g[k * 9 + u]);
+        b.add(g[(Math.floor(u / 3) * 3 + Math.floor(k / 3)) * 9 + (u % 3) * 3 + (k % 3)]);
+      }
+      if (r.size !== 9 || c.size !== 9 || b.size !== 9) return false;
+    }
+    return true;
+  };
+
+  // 严格校验存档，任何异常都视为无存档
+  function validSave(s) {
+    const ints = (a, lo, hi) => Array.isArray(a) && a.length === 81 && a.every((x) => Number.isInteger(x) && x >= lo && x <= hi);
+    return !!s && s.v === 1 && SudokuSolver.DIFFICULTY_CONFIG.order.includes(s.level) &&
+      ints(s.puzzle, 0, 9) && ints(s.solution, 1, 9) && s.puzzle.every((v, i) => !v || v === s.solution[i]) &&
+      validGrid(s.solution) &&
+      !!s.analysis && typeof s.analysis.techniqueUsage === "object" && Number.isInteger(s.analysis.maxTier) &&
+      Array.isArray(s.cells) && s.cells.length === 81 && s.cells.every((c, i) =>
+        Array.isArray(c) && c.length === 2 && Number.isInteger(c[0]) && c[0] >= 0 && c[0] <= 9 &&
+        Array.isArray(c[1]) && c[1].every((d) => Number.isInteger(d) && d >= 1 && d <= 9) &&
+        (!s.puzzle[i] || c[0] === s.puzzle[i]) && (!c[0] || !c[1].length));
+  }
+
+  function loadSave() {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return null;
+      const s = JSON.parse(raw);
+      if (validSave(s)) return s;
+      clearSave();
+    } catch (e) { clearSave(); /* 数据损坏或存储不可用 */ }
+    return null;
+  }
+
+  function refreshHome() {
+    const s = loadSave();
+    $("resume").hidden = !s;
+    if (!s) return;
+    const left = s.cells.filter((c) => !c[0]).length;
+    $("resume-btn").textContent = `▶ 继续上次的游戏（${LEVEL_NAMES[s.level]}，还剩 ${left} 格）`;
+  }
+
+  function resumeGame() {
+    const s = loadSave();
+    if (!s) { refreshHome(); return; }
+    genToken++;
+    level = s.level;
+    ({ puzzle, solution, analysis } = s);
+    cells = s.cells.map(([value, notes]) => ({ value, notes: notes.slice().sort((a, b) => a - b) }));
+    history = [];
+    selected = -1;
+    activeDigit = 0;
+    saveEnabled = true;
+    renderPad();
+    $("game-title").textContent = `难度：${LEVEL_NAMES[level]}`;
+    closeModal();
+    show("game");
+    render();
+  }
 
   const snapshot = () => JSON.stringify(cells);
 
@@ -27,6 +109,7 @@
 
   function startGame(lv) {
     level = lv;
+    saveEnabled = false;
     $("home-msg").textContent = "";
     analysis = null;
     const token = ++genToken;
@@ -47,10 +130,21 @@
     }, 30);
   }
 
+  // 返回首页：棋盘进行中时询问是否保存进度
   function goHome() {
-    if (!screens.game.hidden && history.length && !confirm("返回首页将放弃当前进度，确定吗？")) return;
+    if (!screens.game.hidden && saveEnabled) {
+      closeModal();
+      $("leave-modal").hidden = false;
+      return;
+    }
+    leaveToHome();
+  }
+
+  function leaveToHome() {
     genToken++;
+    saveEnabled = false;
     closeModal();
+    $("leave-modal").hidden = true;
     show("home");
   }
 
@@ -197,6 +291,7 @@
     history = [];
     selected = -1;
     activeDigit = 0;
+    saveEnabled = true;
     renderPad();
     $("game-title").textContent = `难度：${LEVEL_NAMES[level]}`;
     show("game");
@@ -234,6 +329,7 @@
       el.dataset.i = i;
       board.appendChild(el);
     });
+    saveGame();
   }
 
   function notesEl(notes) {
@@ -308,6 +404,8 @@
   function submit() {
     const empty = cells.filter((c) => !c.value).length;
     if (empty && !confirm(`还有 ${empty} 个空格未填，确定提交吗？`)) return;
+    saveEnabled = false;
+    clearSave();
     const wrong = cells.map((c, i) => c.value !== solution[i]);
     const ok = !wrong.some(Boolean);
     $("result-title").textContent = ok ? "🎉 回答正确！" : "❌ 回答错误";
@@ -357,7 +455,23 @@
   }
 
   document.querySelectorAll("[data-level]").forEach((b) =>
-    b.addEventListener("click", () => startGame(b.dataset.level)));
+    b.addEventListener("click", () => {
+      if (loadSave() && !confirm("开始新游戏会覆盖已保存的进度，确定吗？")) return;
+      startGame(b.dataset.level);
+    }));
+  $("resume-btn").addEventListener("click", resumeGame);
+  $("abandon").addEventListener("click", () => {
+    if (!confirm("确定放弃已保存的这一局吗？")) return;
+    clearSave();
+    refreshHome();
+  });
+  $("leave-save").addEventListener("click", () => { saveGame(); leaveToHome(); });
+  $("leave-discard").addEventListener("click", () => { clearSave(); leaveToHome(); });
+  $("leave-cancel").addEventListener("click", () => { $("leave-modal").hidden = true; });
+  // 切到后台或关闭页面时再存一次（iPhone 切换应用时尤其重要）
+  document.addEventListener("visibilitychange", () => { if (document.hidden) saveGame(); });
+  window.addEventListener("pagehide", saveGame);
+  refreshHome();
   for (let d = 1; d <= 9; d++) {
     const b = document.createElement("button");
     b.className = "btn";
