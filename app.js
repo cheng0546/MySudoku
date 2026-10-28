@@ -310,17 +310,23 @@
   function render() {
     const board = $("board");
     board.innerHTML = "";
+    if (activeDigit && cells.filter((c) => c.value === activeDigit).length >= 9) activeDigit = 0;
     const sel = selected >= 0 ? cells[selected] : null;
+    const blocked = new Set();
+    if (activeDigit) cells.forEach((c, j) => { if (c.value === activeDigit) cells.forEach((_, i) => { if (i !== j && isPeer(i, j)) blocked.add(i); }); });
     cells.forEach((c, i) => {
       const el = document.createElement("div");
       el.className = "cell";
       if (hasConflict(i)) el.classList.add("conflict");
       if (puzzle[i]) el.classList.add("given");
       else if (c.value) el.classList.add("user");
-      if (selected >= 0) {
+      if (selected >= 0 && i === selected) el.classList.add("selected");
+      else if (activeDigit) {
+        if (c.value === activeDigit) el.classList.add("same");
+        else if (blocked.has(i)) el.classList.add("blocked");
+      } else if (selected >= 0) {
         const r = Math.floor(i / 9), col = i % 9, sr = Math.floor(selected / 9), sc = selected % 9;
-        if (i === selected) el.classList.add("selected");
-        else if (c.value && c.value === (activeDigit || sel.value)) el.classList.add("same");
+        if (c.value && c.value === sel.value) el.classList.add("same");
         else if (r === sr || col === sc || (Math.floor(r / 3) === Math.floor(sr / 3) && Math.floor(col / 3) === Math.floor(sc / 3))) el.classList.add("related");
       }
       if (activeDigit && c.value === activeDigit) el.classList.add("same");
@@ -329,6 +335,7 @@
       el.dataset.i = i;
       board.appendChild(el);
     });
+    renderPad();
     saveGame();
   }
 
@@ -376,7 +383,13 @@
   }
 
   function renderPad() {
-    document.querySelectorAll("#pad .btn").forEach((b) => b.classList.toggle("active", +b.textContent === activeDigit));
+    const count = {};
+    cells.forEach((c) => { if (c.value) count[c.value] = (count[c.value] || 0) + 1; });
+    document.querySelectorAll("#pad .btn").forEach((b) => {
+      const d = +b.textContent;
+      b.classList.toggle("active", d === activeDigit);
+      b.disabled = (count[d] || 0) >= 9; // 该数字已全部填完
+    });
   }
 
   function undo() {

@@ -24,6 +24,7 @@ h1 { margin-top: 15vh; font-size: 2.4rem; }
 .cell.user { color: #2a5bd7; }
 .cell.related { background: #e6eefc; }
 .cell.same { background: #cfdcf7; }
+.cell.blocked { background: #f3dede; }
 .cell.selected { background: #a9c1f5; }
 .cell.conflict { color: #d00; background: #ffd2d2; }
 .cell.selected.conflict { background: #ff9d9d; }
@@ -34,6 +35,7 @@ h1 { margin-top: 15vh; font-size: 2.4rem; }
 .actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 10px 0; }
 .pad { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; margin: 10px 0; }
 .pad .btn { padding: 10px 0; font-size: 1.2rem; }
+.pad .btn:disabled { background: #eceff4; color: #b4bac6; border-color: #dfe3ea; cursor: not-allowed; }
 .board.small .cell { cursor: default; }
 
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
