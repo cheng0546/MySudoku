@@ -18,8 +18,10 @@ const SudokuSolver = (() => {
     unique_rectangle:  { name: "唯一矩形（类型1）", nameEn: "Unique Rectangle Type 1", tier: 3, score: 16 },
     xyz_wing:          { name: "XYZ-Wing",   nameEn: "XYZ-Wing",          tier: 4, score: 18 },
     swordfish:         { name: "Swordfish",  nameEn: "Swordfish",         tier: 4, score: 20 },
+    x_chain:           { name: "X-Chain 单数链", nameEn: "X-Chain",        tier: 4, score: 21 },
     xy_chain:          { name: "XY-Chain",   nameEn: "XY-Chain",          tier: 4, score: 22 },
     jellyfish:         { name: "Jellyfish",  nameEn: "Jellyfish",         tier: 4, score: 25 },
+    aic:               { name: "交替推理链 AIC", nameEn: "Alternating Inference Chain", tier: 4, score: 26 },
   };
 
   // 技巧教学文本（展示用，可后续做多语言）
@@ -104,6 +106,16 @@ const SudokuSolver = (() => {
       how: "从双候选格 {A,B} 出发，找能看到它且含 B 的双候选格 {B,C}，再继续 {C,D}……直到链末端出现 A。如果起点不是 A，推下去末端必为 A，所以两端至少有一个是 A，同时看到两端的格子划掉 A。",
       example: "链 {1,2} → {2,3} → {3,1}：两端至少有一个是 1，同时看到两端的格子不能是 1。",
     },
+    x_chain: {
+      summary: "只盯着一个数字，用“强链”（某单元里该数字只剩两个位置）和“弱链”（同单元的两个位置）交替连成一条链。链的两端至少有一个是该数字，同时看到两端的格子可以划掉它。",
+      how: "选数字 X，找出各行、列、宫里 X 恰好只有两个位置的强链，用同单元的弱链把它们首尾相接，形成 强-弱-强-弱-强 的链（长度为奇数个链接）。若左端不是 X，则强链推出下一格是 X，弱链使再下一格不是 X……最终右端必为 X。因此两端至少一个是 X。",
+      example: "数字 5：R1C2=R1C8 – R5C8=R5C4 – R8C4=R8C1，两端 R1C2、R8C1 至少一个是 5，能同时看到两端的 R2C1、R9C2 不能是 5。",
+    },
+    aic: {
+      summary: "交替推理链（AIC）：在候选数关系图上，用强链和弱链交替连接，不限数字、不限格子。链两端至少有一个为真，同时与两端有弱链的候选数可排除。",
+      how: "强链：两个候选数必有一个为真（双候选格里的两个数，或单元里只剩两个位置的数字）。弱链：两个候选数最多一个为真（同格不同数，或同单元同数字）。从某候选数开始“强-弱-强……”交替延伸，末端同样是强链。X-Chain 和 XY-Chain 都是 AIC 的特例。",
+      example: "R1C1(3)=R1C1(7) – R1C5(7)=R6C5(7) – R6C5(3)=R6C9(3)：两端都是数字 3，至少一个为真，所以 R1C9 的 3 可排除。",
+    },
   };
 
   // 难度配置：分数阈值、目标提示数范围、生成限制。
@@ -119,6 +131,9 @@ const SudokuSolver = (() => {
     maxAttempts: 4000,
     maxMillis: 20000,
   };
+
+  // 链式推理引擎的最大链长（节点数，即候选数个数）。链越长扫描越慢。
+  const CHAIN_MAX_NODES = 12;
 
   const TECHNIQUE_ORDER = Object.keys(TECHNIQUE_CONFIG);
 
@@ -316,40 +331,10 @@ const SudokuSolver = (() => {
       return null;
     },
 
-    // XY-Chain：由双候选格组成的链（≥3 格），链两端必有一端为 a，同时看到两端的格子排除 a
-    xy_chain(s) {
-      const MAX_LEN = 10;
-      const bivalue = [];
-      for (let i = 0; i < 81; i++) if (!s.values[i] && POP[s.cands[i]] === 2) bivalue.push(i);
-      for (const start of bivalue) {
-        for (const a of digitsOf(s.cands[start])) {
-          const link0 = digitsOf(s.cands[start] & ~(1 << a))[0];
-          const path = [start];
-          const dfs = (cur, link) => {
-            for (const n of bivalue) {
-              if (path.includes(n) || !SEES[cur][n] || !(s.cands[n] & (1 << link))) continue;
-              const other = digitsOf(s.cands[n] & ~(1 << link))[0];
-              if (other === a) {
-                if (path.length < 2) continue;
-                const targets = [];
-                for (let c = 0; c < 81; c++) if (c !== start && c !== n && SEES[c][start] && SEES[c][n]) targets.push([c, a]);
-                const r = eliminate(s, targets, [...path, n], [a], `XY-Chain：${[...path, n].map(rcText).join(" → ")}，链两端至少有一端为 ${a}，同时看到两端的格子不能是 ${a}`);
-                if (r) return r;
-              } else if (path.length + 1 < MAX_LEN) {
-                path.push(n);
-                const r = dfs(n, other);
-                path.pop();
-                if (r) return r;
-              }
-            }
-            return null;
-          };
-          const r = dfs(start, link0);
-          if (r) return r;
-        }
-      }
-      return null;
-    },
+    // 链式推理（候选数关系图上的交替推理链）：三种过滤模式共用同一个引擎 chainSearch
+    xy_chain: (s) => chainSearch(s, "xy"),
+    x_chain: (s) => chainSearch(s, "x"),
+    aic: (s) => chainSearch(s, "aic"),
   };
 
   const rcText = (i) => `R${rowOf(i) + 1}C${colOf(i) + 1}`;
@@ -537,6 +522,97 @@ const SudokuSolver = (() => {
     return null;
   }
 
+  // ---------- 链式推理引擎 ----------
+  // 候选数关系图：节点 = 某格的某个候选数（n = 格*9 + 数字-1）。
+  //  强链：两个候选数“恰有一个为真”（双候选格内两数；单元内某数字恰好两个位置）。
+  //  弱链：两个候选数“最多一个为真”（同格不同数；同单元同数字）。
+  // 交替推理链 AIC：n0 =强= n1 -弱- n2 =强= n3 ... =强= nk。
+  // 若 n0 为假则沿链推出 nk 为真，所以 n0、nk 至少一个为真；
+  // 与两端都有弱链的候选数不可能为真，可以排除。
+  // 模式：xy 只用双候选格的强链（XY-Chain）；x 只用单一数字的单元强链（X-Chain）；aic 不限制。
+  const nodeCell = (n) => (n / 9) | 0;
+  const nodeDigit = (n) => (n % 9) + 1;
+  const nodeText = (n) => `${rcText(nodeCell(n))}(${nodeDigit(n)})`;
+  const isWeak = (a, b) => {
+    if (a === b) return false;
+    const ca = nodeCell(a), cb = nodeCell(b);
+    return ca === cb || (nodeDigit(a) === nodeDigit(b) && SEES[ca][cb]);
+  };
+
+  function chainSearch(s, mode) {
+    const has = (n) => !s.values[nodeCell(n)] && (s.cands[nodeCell(n)] & (1 << nodeDigit(n))) !== 0;
+    const strong = Array.from({ length: 729 }, () => []);
+    const useCell = mode !== "x", useUnit = mode !== "xy";
+    if (useCell) {
+      for (let c = 0; c < 81; c++) {
+        if (s.values[c] || POP[s.cands[c]] !== 2) continue;
+        const [d1, d2] = digitsOf(s.cands[c]);
+        strong[c * 9 + d1 - 1].push(c * 9 + d2 - 1);
+        strong[c * 9 + d2 - 1].push(c * 9 + d1 - 1);
+      }
+    }
+    if (useUnit) {
+      for (let u = 0; u < 27; u++) {
+        for (let d = 1; d <= 9; d++) {
+          const pos = UNITS[u].filter((c) => cellHas(s, c, d));
+          if (pos.length !== 2) continue;
+          const a = pos[0] * 9 + d - 1, b = pos[1] * 9 + d - 1;
+          if (!strong[a].includes(b)) { strong[a].push(b); strong[b].push(a); }
+        }
+      }
+    }
+    const weakNbrs = (n) => {
+      const out = [], c = nodeCell(n), d = nodeDigit(n);
+      if (mode === "aic") for (let e = 1; e <= 9; e++) if (e !== d && cellHas(s, c, e)) out.push(c * 9 + e - 1);
+      for (const p of PEERS[c]) if (cellHas(s, p, d)) out.push(p * 9 + d - 1);
+      return out;
+    };
+
+    const visited = new Int32Array(729 * 2);
+    const parent = new Int32Array(729 * 2);
+    let stamp = 0;
+    for (let n0 = 0; n0 < 729; n0++) {
+      if (!has(n0) || !strong[n0].length) continue;
+      stamp++;
+      // 状态：node*2+0 = 刚经过弱链/起点（下一步走强链）；node*2+1 = 刚经过强链（下一步走弱链）
+      let frontier = [n0 * 2];
+      visited[n0 * 2] = stamp;
+      parent[n0 * 2] = -1;
+      for (let depth = 1; depth < CHAIN_MAX_NODES && frontier.length; depth++) {
+        const next = [];
+        for (const st of frontier) {
+          const n = st >> 1;
+          const nbrs = st & 1 ? weakNbrs(n) : strong[n];
+          const ns = st & 1 ? 0 : 1;
+          for (const m of nbrs) {
+            const key = m * 2 + ns;
+            if (visited[key] === stamp) continue;
+            visited[key] = stamp;
+            parent[key] = st;
+            next.push(key);
+            if (ns !== 1 || m === n0 || depth < 3) continue;
+            const path = [];
+            for (let k = key; k !== -1; k = parent[k]) path.push(k >> 1);
+            path.reverse();
+            if (new Set(path).size !== path.length) continue;
+            const targets = [];
+            for (const c of weakNbrs(n0)) if (c !== m && isWeak(m, c)) targets.push([nodeCell(c), nodeDigit(c)]);
+            if (!targets.length) continue;
+            const cells = [...new Set(path.map(nodeCell))];
+            const values = [...new Set(path.map(nodeDigit))];
+            const chainText = path.map((x, i) => (i ? (i % 2 ? " = " : " – ") : "") + nodeText(x)).join("");
+            const label = { xy: "XY-Chain", x: "X-Chain", aic: "AIC" }[mode];
+            const r = eliminate(s, targets, cells, values,
+              `${label}：${chainText}（= 强链，– 弱链）。若 ${nodeText(n0)} 为假则链末端 ${nodeText(m)} 为真，所以两端至少一个为真，与两端都有弱链的候选数可排除`);
+            if (r) return Object.assign(r, { chain: path });
+          }
+        }
+        frontier = next;
+      }
+    }
+    return null;
+  }
+
   // ---------- 求解主流程 ----------
   function normalize(puzzle) {
     let flat = puzzle;
@@ -592,6 +668,7 @@ const SudokuSolver = (() => {
         row: 0, col: 0, value: 0, eliminatedCandidates: [],
         cells: found.cells.map(rc), values: found.values, reason: found.reason,
       };
+      if (found.chain) step.chain = found.chain.map((n) => ({ ...rc(nodeCell(n)), value: nodeDigit(n) }));
       if (found.action === "place") {
         values[found.cell] = found.value;
         cands[found.cell] = 0;

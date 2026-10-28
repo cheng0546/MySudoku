@@ -1,4 +1,4 @@
-# MySudoku
+﻿# MySudoku
 
 A web-based Sudoku game for learning and improving solving techniques. Every puzzle is generated with a **unique solution**. The UI is currently in Chinese (multi-language support is planned).
 
@@ -32,7 +32,7 @@ Difficulty is determined by a logic solver (`solver.js`), not by the number of c
 | 1 | Naked Single (1), Hidden Single (2) | Easy |
 | 2 | Locked Candidates (4), Naked Pair (4), Hidden Pair (5), Naked Triple (8) | Medium |
 | 3 | X-Wing (12), Skyscraper (13), Two-String Kite (13), XY-Wing (14), Finned X-Wing (15), Unique Rectangle type 1 (16) | Hard |
-| 4 | XYZ-Wing (18), Swordfish (20), XY-Chain (22), Jellyfish (25) | Expert |
+| 4 | XYZ-Wing (18), Swordfish (20), X-Chain (21), XY-Chain (22), Jellyfish (25), AIC (26) | Expert |
 
 The classification uses the highest tier actually used plus the total score (see `TECHNIQUE_CONFIG` and `DIFFICULTY_CONFIG` in `solver.js`). Puzzles the solver cannot finish are discarded. Generation retries until the target level is met, with attempt and time limits.
 
