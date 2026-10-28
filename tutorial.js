@@ -570,5 +570,42 @@ const Tutorial = (() => {
     renderTerms(container, "先认识几个基本概念", BASICS);
   }
 
-  return { renderLesson, renderBasics };
+  // 根据求解器返回的真实步骤（hint）自动生成文字解释和棋盘高亮图
+  function renderHint(container, h) {
+    const cfg = SudokuSolver.TECHNIQUE_CONFIG[h.technique];
+    const idx = (x) => x.row * 9 + x.col;
+    const candStr = (mask) => [1, 2, 3, 4, 5, 6, 7, 8, 9].filter((d) => mask & (1 << d)).join("");
+    const cells = [];
+    h.boardValues.forEach((v, i) => { if (v) cells.push(G(Math.floor(i / 9) + 1, (i % 9) + 1, v)); });
+    const map = new Map();
+    const cellAt = (i, m) => {
+      let o = map.get(i);
+      if (!o) { o = N(Math.floor(i / 9) + 1, (i % 9) + 1, candStr(h.cands[i])); map.set(i, o); }
+      if (m === "target" || !o.m) o.m = m;
+      return o;
+    };
+    for (const n of h.chain || []) for (const c of n.cells) cellAt(idx(c), "chain");
+    for (const c of h.cells) cellAt(idx(c), "base");
+    const keys = h.values.join("");
+    for (const c of h.cells) cellAt(idx(c), "base").k = keys;
+    let result;
+    if (h.action === "place") {
+      map.set(idx(h), P(h.row + 1, h.col + 1, h.value, "target"));
+      result = `在 R${h.row + 1}C${h.col + 1} 填入 ${h.value}。`;
+    } else {
+      for (const e of h.elims) {
+        const o = cellAt(idx(e), "target");
+        o.x = (o.x || "") + e.value;
+      }
+      result = "红色划掉的候选数可以排除：" + h.elims.map((e) => `R${e.row + 1}C${e.col + 1} 的 ${e.value}`).join("、") + "。";
+    }
+    container.appendChild(para("", "技巧：", `${cfg.name}（${cfg.nameEn}）`));
+    container.appendChild(para("", "推理：", h.reason));
+    container.appendChild(para("", "结论：", result));
+    container.appendChild(diagramBlock(D([...cells, ...map.values()], {
+      lab: { base: "推理所用的格子", chain: "链上的格子", target: h.action === "place" ? "可以填数的格子" : "要排除候选数的格子" },
+    })));
+  }
+
+  return { renderLesson, renderBasics, renderHint };
 })();

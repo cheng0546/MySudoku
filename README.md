@@ -11,6 +11,7 @@ A web-based Sudoku game for learning and improving solving techniques. Every puz
   - **Candidate** – multiple pencil-mark numbers per cell
 - Undo, clear cell, restart, and submit
 - Result screen showing the full answer, correctness (wrong cells highlighted), retry, and back to home
+- Step-by-step hints: "next step" and "hardest step" are computed by the logic solver from your current board, with a written explanation and an auto-generated highlighted diagram (cells used, candidates to eliminate)
 - Keyboard support: `1-9` to fill, `Backspace`/`Delete` to clear, `Ctrl+Z` to undo, arrow keys to move
 
 ## Install as an app (PWA)

@@ -37,6 +37,14 @@ for (const level of DIFFICULTY_CONFIG.order) {
     check(a.steps.every((s) => s.action !== "place" || r.solution[s.row * 9 + s.col] === s.value), "逻辑填数与答案不符");
     check(a.steps.every((s) => s.eliminatedCandidates.every((e) => r.solution[e.row * 9 + e.col] !== e.value)), "排除了正确答案的候选数");
     if (level === "easy") check(a.maxTier === 1, "简单题使用了 Tier 1 以外的技巧");
+    // 提示：在题目初始盘面上，提示步骤的填数/排除必须与唯一解一致
+    for (const tier of [1, a.maxTier]) {
+      const h = analyzeSudoku(r.puzzle, { hintTier: tier }).hint;
+      check(h && h.tier >= tier && h.reason, `未返回 tier>=${tier} 的提示`);
+      if (!h) continue;
+      if (h.action === "place") check(r.solution[h.row * 9 + h.col] === h.value, "提示填数与答案不符");
+      else check(h.elims.every((e) => r.solution[e.row * 9 + e.col] !== e.value), "提示排除了正确答案");
+    }
     if (level === "medium") check(a.maxTier <= 2, "中等题使用了高于 Tier 2 的技巧");
     if (level === "expert") check(a.maxTier === 4, "专家题没有使用 Tier 4 技巧");
     for (const [t, c] of Object.entries(a.techniqueUsage)) usage[t] = (usage[t] || 0) + c;

@@ -16,7 +16,8 @@ const SudokuSolver = (() => {
   }
 
   // 分析题目：只用已实现的逻辑技巧求解。不修改传入的 puzzle。
-  function analyzeSudoku(puzzle) {
+  // opts.hintTier：遇到 tier ≥ 该值的首个步骤时不执行，停下并在 result.hint 中返回该步骤和当时的盘面/候选数快照（供提示与教学使用）。
+  function analyzeSudoku(puzzle, opts) {
     const values = normalize(puzzle);
     if (!values) return emptyResult("invalid_input");
 
@@ -58,6 +59,16 @@ const SudokuSolver = (() => {
         cells: found.cells.map(rc), values: found.values, reason: found.reason,
       };
       if (found.chain) step.chain = found.chain.map((n) => ({ cells: n.cells.map(rc), value: n.value }));
+      if (opts && opts.hintTier && cfg.tier >= opts.hintTier) {
+        const hint = {
+          technique: tech, tier: cfg.tier, action: found.action, cells: step.cells, values: found.values,
+          reason: found.reason, chain: step.chain, boardValues: values.slice(), cands: cands.slice(),
+        };
+        if (found.action === "place") Object.assign(hint, rc(found.cell), { value: found.value });
+        else hint.elims = found.elims.map(([c, d]) => ({ row: rowOf(c), col: colOf(c), value: d }));
+        result.hint = hint;
+        return result;
+      }
       if (found.action === "place") {
         values[found.cell] = found.value;
         cands[found.cell] = 0;

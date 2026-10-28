@@ -69,8 +69,31 @@
     modal.hidden = false;
   }
 
+  // 从当前盘面（已确定的数字）求下一步真实推理，并展示解释与高亮图
+  function showNextStep(tier) {
+    const t = SudokuSolver.TECHNIQUE_CONFIG;
+    openModal(tier > 1 ? "本题最难的一步" : "下一步提示", true);
+    const body = $("modal-body");
+    body.className = "help";
+    const board = puzzle.map((v, i) => v || cells[i].value || 0);
+    const r = SudokuSolver.analyzeSudoku(board, { hintTier: tier });
+    if (r.error === "duplicate_given" || r.error === "contradiction") {
+      body.textContent = "当前盘面有重复或矛盾的数字（红色标出），请先修正后再获取提示。";
+    } else if (!r.hint) {
+      body.textContent = r.solved ? "按当前盘面，已没有需要该级别技巧的步骤了，继续加油！" : "当前盘面无法用已实现的技巧继续推理。";
+    } else {
+      Tutorial.renderHint(body, r.hint);
+      const b = document.createElement("button");
+      b.className = "btn";
+      b.textContent = `查看「${t[r.hint.technique].name}」完整讲解`;
+      b.addEventListener("click", () => showTechniqueHelp(r.hint.technique));
+      body.appendChild(b);
+    }
+    modal.querySelector(".modal-box").scrollTop = 0;
+  }
+
   function showTechniqueList() {
-    openModal("本题可能用到的技巧", false);
+    openModal("提示", false);
     const body = $("modal-body");
     const usage = analysis ? analysis.techniqueUsage : {};
     const list = Object.keys(SudokuSolver.TECHNIQUE_CONFIG).filter((t) => usage[t]);
@@ -78,9 +101,19 @@
       body.textContent = "题目尚未生成。";
       return;
     }
+    const steps = document.createElement("div");
+    steps.className = "tech-list";
+    for (const [label, tier] of [["💡 下一步该做什么", 1], ["🔍 找出本题最难的一步", analysis.maxTier]]) {
+      const b = document.createElement("button");
+      b.className = "btn tech-item";
+      b.textContent = label;
+      b.addEventListener("click", () => showNextStep(tier));
+      steps.appendChild(b);
+    }
+    body.appendChild(steps);
     const tip = document.createElement("p");
     tip.className = "sub";
-    tip.textContent = "点击技巧查看讲解：";
+    tip.textContent = "本题可能用到的技巧（点击查看讲解）：";
     body.appendChild(tip);
     const wrap = document.createElement("div");
     wrap.className = "tech-list";
