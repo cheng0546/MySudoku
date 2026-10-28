@@ -12,7 +12,7 @@ h1 { margin-top: 15vh; font-size: 2.4rem; }
 .btn:hover { background: #eaf0fb; }
 .btn.primary { background: #3a6fd8; color: #fff; border-color: #3a6fd8; }
 .btn.primary:hover { background: #2f5dbb; }
-.btn.mode.active { background: #3a6fd8; color: #fff; border-color: #3a6fd8; }
+.btn.active { background: #3a6fd8; color: #fff; border-color: #3a6fd8; }
 .levels .btn { padding: 14px; font-size: 1.15rem; }
 
 .board { display: grid; grid-template-columns: repeat(9, 1fr); width: 100%; aspect-ratio: 1; margin: 12px 0; border: 2px solid #222; background: #fff; }
@@ -30,7 +30,25 @@ h1 { margin-top: 15vh; font-size: 2.4rem; }
 .notes { display: grid; grid-template-columns: repeat(3, 1fr); width: 100%; height: 100%; font-size: clamp(.5rem, 2.2vw, .8rem); color: #556; }
 .notes span { display: flex; align-items: center; justify-content: center; }
 
-.modes, .actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 10px 0; }
+.actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 10px 0; }
 .pad { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; margin: 10px 0; }
 .pad .btn { padding: 10px 0; font-size: 1.2rem; }
 .board.small .cell { cursor: default; }
+
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.topbar h2 { margin: 0; font-size: 1.2rem; }
+.topbar .btn { padding: 6px 12px; font-size: .95rem; }
+
+.modal { position: fixed; inset: 0; background: rgba(0, 0, 0, .45); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
+.modal-box { position: relative; width: 100%; max-width: 420px; max-height: 80vh; overflow-y: auto; background: #fff; border-radius: 12px; padding: 20px; text-align: left; }
+.modal-box h3 { margin: 0 0 12px; padding-right: 28px; }
+.modal-close { position: absolute; top: 8px; right: 10px; border: 0; background: none; font-size: 1.6rem; cursor: pointer; color: #667; }
+.modal-back { margin-bottom: 10px; padding: 4px 10px; font-size: .9rem; }
+.tech-list { display: flex; flex-direction: column; gap: 8px; }
+.tech-item { display: flex; justify-content: space-between; align-items: center; text-align: left; }
+.tier { font-size: .8rem; color: #667; }
+.help p { margin: 8px 0; line-height: 1.6; }
+.help .example { background: #f2f5fa; border-radius: 8px; padding: 8px 10px; }
+
+.tip { color: #667; font-size: .9rem; line-height: 1.6; margin: 8px 0; }
+#board { touch-action: manipulation; -webkit-touch-callout: none; }
