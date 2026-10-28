@@ -1,0 +1,177 @@
+(() => {
+  const LEVEL_NAMES = { easy: "简单", medium: "中等", hard: "困难" };
+  const $ = (id) => document.getElementById(id);
+  const screens = { home: $("home"), game: $("game"), result: $("result") };
+
+  let level = "easy";
+  let puzzle = [], solution = [];
+  let cells = [];      // { value, notes: number[] }
+  let selected = -1;
+  let mode = "value";
+  let history = [];
+
+  const show = (name) => {
+    for (const k in screens) screens[k].hidden = k !== name;
+  };
+
+  const snapshot = () => JSON.stringify(cells);
+
+  const pushHistory = () => {
+    history.push(snapshot());
+  };
+
+  function newCells() {
+    return puzzle.map((v) => ({ value: v, notes: [] }));
+  }
+
+  function startGame(lv) {
+    level = lv;
+    $("game-title").textContent = "生成中…";
+    show("game");
+    // 延迟一帧让界面先刷新，再进行耗时的生成
+    setTimeout(() => {
+      ({ puzzle, solution } = SudokuGen.generate(lv));
+      resetBoard();
+    }, 30);
+  }
+
+  function resetBoard() {
+    cells = newCells();
+    history = [];
+    selected = -1;
+    $("game-title").textContent = `难度：${LEVEL_NAMES[level]}`;
+    show("game");
+    render();
+  }
+
+  function render() {
+    const board = $("board");
+    board.innerHTML = "";
+    const sel = selected >= 0 ? cells[selected] : null;
+    cells.forEach((c, i) => {
+      const el = document.createElement("div");
+      el.className = "cell";
+      if (puzzle[i]) el.classList.add("given");
+      else if (c.value) el.classList.add("user");
+      if (selected >= 0) {
+        const r = Math.floor(i / 9), col = i % 9, sr = Math.floor(selected / 9), sc = selected % 9;
+        if (i === selected) el.classList.add("selected");
+        else if (sel.value && c.value === sel.value) el.classList.add("same");
+        else if (r === sr || col === sc || (Math.floor(r / 3) === Math.floor(sr / 3) && Math.floor(col / 3) === Math.floor(sc / 3))) el.classList.add("related");
+      }
+      if (c.value) el.textContent = c.value;
+      else if (c.notes.length) el.appendChild(notesEl(c.notes));
+      el.addEventListener("click", () => { selected = i; render(); });
+      board.appendChild(el);
+    });
+  }
+
+  function notesEl(notes) {
+    const n = document.createElement("div");
+    n.className = "notes";
+    for (let d = 1; d <= 9; d++) {
+      const s = document.createElement("span");
+      s.textContent = notes.includes(d) ? d : "";
+      n.appendChild(s);
+    }
+    return n;
+  }
+
+  function input(d) {
+    if (selected < 0 || puzzle[selected]) return;
+    const c = cells[selected];
+    if (mode === "value") {
+      if (c.value === d && !c.notes.length) return;
+      pushHistory();
+      c.value = d;
+      c.notes = []; // 填入确定数字后清除该格所有待定数字
+    } else {
+      if (c.value) return; // 已有确定数字时不能填待定数字
+      pushHistory();
+      const k = c.notes.indexOf(d);
+      if (k >= 0) c.notes.splice(k, 1);
+      else c.notes.push(d);
+      c.notes.sort();
+    }
+    render();
+  }
+
+  function undo() {
+    if (!history.length) return;
+    cells = JSON.parse(history.pop());
+    render();
+  }
+
+  function clearCell() {
+    if (selected < 0 || puzzle[selected]) return;
+    const c = cells[selected];
+    if (!c.value && !c.notes.length) return;
+    pushHistory();
+    c.value = 0;
+    c.notes = [];
+    render();
+  }
+
+  function clearAll() {
+    if (!confirm("确定清除所有标记并重新开始吗？")) return;
+    pushHistory();
+    cells = newCells();
+    render();
+  }
+
+  function submit() {
+    const empty = cells.filter((c) => !c.value).length;
+    if (empty && !confirm(`还有 ${empty} 个空格未填，确定提交吗？`)) return;
+    const wrong = cells.map((c, i) => c.value !== solution[i]);
+    const ok = !wrong.some(Boolean);
+    $("result-title").textContent = ok ? "🎉 回答正确！" : "❌ 回答错误";
+    $("result-detail").textContent = ok
+      ? "恭喜你，成功解出了这道数独！"
+      : `共有 ${wrong.filter(Boolean).length} 个格子有误或未填（红色标出）。`;
+    const ans = $("answer");
+    ans.innerHTML = "";
+    solution.forEach((v, i) => {
+      const el = document.createElement("div");
+      el.className = "cell" + (puzzle[i] ? " given" : "") + (wrong[i] ? " wrong" : "");
+      el.textContent = v;
+      ans.appendChild(el);
+    });
+    show("result");
+  }
+
+  document.querySelectorAll("[data-level]").forEach((b) =>
+    b.addEventListener("click", () => startGame(b.dataset.level)));
+  document.querySelectorAll(".mode").forEach((b) =>
+    b.addEventListener("click", () => {
+      mode = b.dataset.mode;
+      document.querySelectorAll(".mode").forEach((x) => x.classList.toggle("active", x === b));
+    }));
+  for (let d = 1; d <= 9; d++) {
+    const b = document.createElement("button");
+    b.className = "btn";
+    b.textContent = d;
+    b.addEventListener("click", () => input(d));
+    $("pad").appendChild(b);
+  }
+  $("undo").addEventListener("click", undo);
+  $("clear-cell").addEventListener("click", clearCell);
+  $("clear-all").addEventListener("click", clearAll);
+  $("submit").addEventListener("click", submit);
+  $("retry").addEventListener("click", resetBoard);
+  $("home-btn").addEventListener("click", () => show("home"));
+
+  document.addEventListener("keydown", (e) => {
+    if (screens.game.hidden) return;
+    if (/^[1-9]$/.test(e.key)) input(+e.key);
+    else if (e.key === "Backspace" || e.key === "Delete") clearCell();
+    else if ((e.ctrlKey || e.metaKey) && e.key === "z") undo();
+    else if (selected >= 0 && e.key.startsWith("Arrow")) {
+      const r = Math.floor(selected / 9), c = selected % 9;
+      const nr = Math.max(0, Math.min(8, r + (e.key === "ArrowDown") - (e.key === "ArrowUp")));
+      const nc = Math.max(0, Math.min(8, c + (e.key === "ArrowRight") - (e.key === "ArrowLeft")));
+      selected = nr * 9 + nc;
+      render();
+      e.preventDefault();
+    }
+  });
+})();
