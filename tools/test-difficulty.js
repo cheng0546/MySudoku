@@ -5,11 +5,13 @@ const path = require("path");
 const vm = require("vm");
 
 const root = path.join(__dirname, "..");
+const I18N_FILES = ["core", "zh", "en", "fr", "content-en-1", "content-en-2", "content-fr-1", "content-fr-2"].map((n) => `i18n/${n}.js`);
 const SOLVER_FILES = ["config", "help", "core", "patterns", "chains", "als", "forcing", "analyze"].map((n) => `solver/${n}.js`);
-for (const [file, name] of [...SOLVER_FILES.map((f) => [f, null]), ["sudoku.js", "SudokuGen"]]) {
+for (const [file, name] of [...I18N_FILES.map((f) => [f, null]), ...SOLVER_FILES.map((f) => [f, null]), ["sudoku.js", "SudokuGen"]]) {
   vm.runInThisContext(`${fs.readFileSync(path.join(root, file), "utf8")}\n${name ? `globalThis.${name} = ${name};` : ""}`);
 }
-vm.runInThisContext("globalThis.SudokuSolver = SudokuSolver;");
+vm.runInThisContext("globalThis.SudokuSolver = SudokuSolver; globalThis.I18n = I18n;");
+I18n.setLang(process.env.TEST_LANG || "zh"); // 测试语言（环境变量 TEST_LANG=en|fr|zh）
 
 const N = +process.argv[2] || 20;
 const { TECHNIQUE_CONFIG, DIFFICULTY_CONFIG, analyzeSudoku, classifyDifficulty } = SudokuSolver;

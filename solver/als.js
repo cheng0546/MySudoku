@@ -1,6 +1,6 @@
 // 组合技巧：ALS-XZ、ALS 链、Sue de Coq
 (() => {
-  const { UNITS, SEES, PEERS, POP, rowOf, colOf, boxOf, digitsOf, rc, unitName, combos, place, eliminate, rcText, cellHas, CHAIN_MAX_NODES } = SolverKit;
+  const { UNITS, SEES, PEERS, POP, rowOf, colOf, boxOf, digitsOf, rc, unitName, unitKind, L: LS, combos, place, eliminate, rcText, cellHas, CHAIN_MAX_NODES } = SolverKit;
   // ---------- ALS-XZ ----------
   // ALS（几乎锁定集）：同一单元内 n 个格，候选数共 n+1 个。
   // 两个 ALS 共有“限制数字”X（两边含 X 的格子两两互相看到），X 在两个 ALS 里至多一边为真，
@@ -42,7 +42,7 @@
               if (cellHas(s, c, z) && !A.cells.includes(c) && !B.cells.includes(c) && zc.every((q) => SEES[c][q])) targets.push([c, z]);
             }
             const r = eliminate(s, targets, [...A.cells, ...B.cells], [x, z],
-              `ALS-XZ：A=${A.cells.map(rcText).join("、")}（${A.cells.length} 格含数字 ${digitsOf(A.mask).join("")}），B=${B.cells.map(rcText).join("、")}（${B.cells.length} 格含数字 ${digitsOf(B.mask).join("")}）。限制数字 ${x}：A、B 中至多一边是 ${x}，另一边成为锁定集，必含 ${z}。同时看到所有 ${z} 的格子排除 ${z}`);
+              I18n.t("r.als_xz", { a: LS(A.cells.map(rcText)), na: A.cells.length, da: digitsOf(A.mask).join(""), b: LS(B.cells.map(rcText)), nb: B.cells.length, db: digitsOf(B.mask).join(""), x, z }));
             if (r) return Object.assign(r, { chain: [A, B].map((a, k) => ({ cells: a.cells, value: k ? 0 : x })) });
           }
         }
@@ -95,7 +95,7 @@
         const cells = [...new Set(chain.flatMap((i) => list[i].cells))];
         const text = chain.map((i, k) => `{${list[i].cells.map(rcText).join(" ")}}` + (k < rcc.length ? ` –${rcc[k]}– ` : "")).join("");
         const r = eliminate(s, targets, cells, [...new Set([...rcc, z])],
-          `ALS 链：${text}。相邻 ALS 通过限制数字（括号间数字）相连，两端 ALS 必有一个含 ${z}。同时看到两端所有 ${z} 的格子排除 ${z}`);
+          I18n.t("r.als_chain", { chain: text, z }));
         if (r) return Object.assign(r, { chain: chain.map((i, k) => ({ cells: list[i].cells, value: rcc[k] || 0 })) });
       }
       return null;
@@ -167,9 +167,10 @@
               for (const d of digitsOf(R)) targets.push([c, d]);
             }
             const r = eliminate(s, targets, [...I, ...A.cells, ...C.cells], digitsOf(V),
-              `Sue de Coq：${unitName(L)}与${unitName(b)}的交叉区 ${I.map(rcText).join("、")} 含数字 ${digitsOf(V).join("")}；` +
-              `A=${A.cells.map(rcText).join("、")}（数字 ${digitsOf(A.mask).join("")}），C=${C.cells.map(rcText).join("、")}（数字 ${digitsOf(C.mask).join("")}）。` +
-              `这 ${POP[V]} 个格恰好装下这 ${POP[V]} 个数字：A 的数字只能在交叉区或 A 内，C 的数字只能在交叉区或 C 内，其余数字只能在交叉区内`);
+              I18n.t("r.sue", {
+                u1: unitName(L), u2: unitName(b), i: LS(I.map(rcText)), v: digitsOf(V).join(""), n: POP[V],
+                a: LS(A.cells.map(rcText)), da: digitsOf(A.mask).join(""), c: LS(C.cells.map(rcText)), dc: digitsOf(C.mask).join(""),
+              }));
             if (r) return r;
           }
         }

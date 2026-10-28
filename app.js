@@ -1,5 +1,5 @@
 (() => {
-  const LEVEL_NAMES = SudokuSolver.DIFFICULTY_CONFIG.names;
+  const LEVEL_NAMES = new Proxy({}, { get: (_, k) => I18n.t("level." + k) });
   const $ = (id) => document.getElementById(id);
   const screens = { home: $("home"), game: $("game"), result: $("result"), tutorial: $("tutorial") };
 
@@ -76,7 +76,7 @@
     $("resume").hidden = !s;
     if (!s) return;
     const left = s.cells.filter((c) => !c[0]).length;
-    $("resume-btn").textContent = `▶ 继续上次的游戏（${LEVEL_NAMES[s.level]}，还剩 ${left} 格）`;
+    $("resume-btn").textContent = I18n.t("home.resume", { level: LEVEL_NAMES[s.level], left });
   }
 
   function resumeGame() {
@@ -91,7 +91,7 @@
     activeDigit = 0;
     saveEnabled = true;
     renderPad();
-    $("game-title").textContent = `难度：${LEVEL_NAMES[level]}`;
+    $("game-title").textContent = I18n.t("game.title", { level: LEVEL_NAMES[level] });
     closeModal();
     show("game");
     render();
@@ -113,15 +113,15 @@
     $("home-msg").textContent = "";
     analysis = null;
     const token = ++genToken;
-    $("game-title").textContent = "生成中…";
+    $("game-title").textContent = I18n.t("game.generating");
     show("game");
     // 延迟一帧让界面先刷新，再进行耗时的生成
     setTimeout(() => {
       if (token !== genToken) return;
       const r = SudokuGen.generatePuzzle(lv);
       if (!r.ok) {
-        const why = r.reason === "timeout" ? "生成超时" : "多次尝试仍未生成符合要求的题目";
-        $("home-msg").textContent = `${why}（${LEVEL_NAMES[lv]}），请重试或选择其他难度。`;
+        const why = I18n.t(r.reason === "timeout" ? "gen.timeout" : "gen.failed");
+        $("home-msg").textContent = I18n.t("gen.msg", { why, level: LEVEL_NAMES[lv] });
         show("home");
         return;
       }
@@ -166,20 +166,20 @@
   // 从当前盘面（已确定的数字）求下一步真实推理，并展示解释与高亮图
   function showNextStep(tier) {
     const t = SudokuSolver.TECHNIQUE_CONFIG;
-    openModal(tier > 1 ? "本题最难的一步" : "下一步提示", true);
+    openModal(I18n.t(tier > 1 ? "hint.hardest" : "hint.next"), true);
     const body = $("modal-body");
     body.className = "help";
     const board = puzzle.map((v, i) => v || cells[i].value || 0);
     const r = SudokuSolver.analyzeSudoku(board, { hintTier: tier });
     if (r.error === "duplicate_given" || r.error === "contradiction") {
-      body.textContent = "当前盘面有重复或矛盾的数字（红色标出），请先修正后再获取提示。";
+      body.textContent = I18n.t("hint.conflict");
     } else if (!r.hint) {
-      body.textContent = r.solved ? "按当前盘面，已没有需要该级别技巧的步骤了，继续加油！" : "当前盘面无法用已实现的技巧继续推理。";
+      body.textContent = I18n.t(r.solved ? "hint.none" : "hint.stuck");
     } else {
       Tutorial.renderHint(body, r.hint);
       const b = document.createElement("button");
       b.className = "btn";
-      b.textContent = `查看「${t[r.hint.technique].name}」完整讲解`;
+      b.textContent = I18n.t("hint.full", { name: I18n.techName(r.hint.technique) });
       b.addEventListener("click", () => showTechniqueHelp(r.hint.technique));
       body.appendChild(b);
     }
@@ -187,17 +187,17 @@
   }
 
   function showTechniqueList() {
-    openModal("提示", false);
+    openModal(I18n.t("hint.title"), false);
     const body = $("modal-body");
     const usage = analysis ? analysis.techniqueUsage : {};
     const list = Object.keys(SudokuSolver.TECHNIQUE_CONFIG).filter((t) => usage[t]);
     if (!list.length) {
-      body.textContent = "题目尚未生成。";
+      body.textContent = I18n.t("hint.notReady");
       return;
     }
     const steps = document.createElement("div");
     steps.className = "tech-list";
-    for (const [label, tier] of [["💡 下一步该做什么", 1], ["🔍 找出本题最难的一步", analysis.maxTier]]) {
+    for (const [label, tier] of [[I18n.t("hint.btnNext"), 1], [I18n.t("hint.btnHardest"), analysis.maxTier]]) {
       const b = document.createElement("button");
       b.className = "btn tech-item";
       b.textContent = label;
@@ -207,7 +207,7 @@
     body.appendChild(steps);
     const tip = document.createElement("p");
     tip.className = "sub";
-    tip.textContent = "本题可能用到的技巧（点击查看讲解）：";
+    tip.textContent = I18n.t("hint.listTip");
     body.appendChild(tip);
     const wrap = document.createElement("div");
     wrap.className = "tech-list";
@@ -216,7 +216,7 @@
       const b = document.createElement("button");
       b.className = "btn tech-item";
       b.innerHTML = `<span></span><span class="tier"></span>`;
-      b.children[0].textContent = cfg.name;
+      b.children[0].textContent = I18n.techName(t);
       b.children[1].textContent = `Tier ${cfg.tier}`;
       b.addEventListener("click", () => showTechniqueHelp(t));
       wrap.appendChild(b);
@@ -227,7 +227,7 @@
   function showTechniqueHelp(t) {
     const cfg = SudokuSolver.TECHNIQUE_CONFIG[t];
     const help = SudokuSolver.TECHNIQUE_HELP[t];
-    openModal(`${cfg.name}（${cfg.nameEn}）`, true);
+    openModal(I18n.techFull(t), true);
     const body = $("modal-body");
     body.className = "help";
     Tutorial.renderLesson(body, t);
@@ -235,20 +235,20 @@
   }
 
   // ---------- 技巧教学页（首页入口） ----------
-  const TIER_TITLES = { 1: "Tier 1 基础（简单）", 2: "Tier 2 中级（中等）", 3: "Tier 3 高级（困难）", 4: "Tier 4 专家" };
+  const TIER_KEYS = { 1: "tier.1", 2: "tier.2", 3: "tier.3", 4: "tier.4" };
 
   function showTutorialList() {
-    $("tutorial-title").textContent = "技巧教学";
+    $("tutorial-title").textContent = I18n.t("home.tutorial");
     const body = $("tutorial-body");
     body.innerHTML = "";
     const intro = document.createElement("p");
     intro.className = "sub";
-    intro.textContent = "这里收录了出题时可能用到的全部技巧，点击查看图文讲解。";
+    intro.textContent = I18n.t("tutorial.intro");
     body.appendChild(intro);
     Tutorial.renderBasics(body);
     for (const tier of [1, 2, 3, 4]) {
       const h = document.createElement("h4");
-      h.textContent = TIER_TITLES[tier];
+      h.textContent = I18n.t(TIER_KEYS[tier]);
       body.appendChild(h);
       const wrap = document.createElement("div");
       wrap.className = "tech-list";
@@ -256,8 +256,9 @@
         if (cfg.tier !== tier) continue;
         const b = document.createElement("button");
         b.className = "btn tech-item";
-        b.innerHTML = "<span></span><span class=\"tier\">查看 ›</span>";
-        b.children[0].textContent = `${cfg.name}（${cfg.nameEn}）`;
+        b.innerHTML = "<span></span><span class=\"tier\"></span>";
+        b.children[0].textContent = I18n.techFull(key);
+        b.children[1].textContent = I18n.t("tutorial.view");
         b.addEventListener("click", () => showTutorialDetail(key));
         wrap.appendChild(b);
       }
@@ -267,8 +268,7 @@
   }
 
   function showTutorialDetail(key) {
-    const cfg = SudokuSolver.TECHNIQUE_CONFIG[key];
-    $("tutorial-title").textContent = cfg.name;
+    $("tutorial-title").textContent = I18n.techName(key);
     const body = $("tutorial-body");
     body.innerHTML = "";
     Tutorial.renderLesson(body, key);
@@ -293,7 +293,7 @@
     activeDigit = 0;
     saveEnabled = true;
     renderPad();
-    $("game-title").textContent = `难度：${LEVEL_NAMES[level]}`;
+    $("game-title").textContent = I18n.t("game.title", { level: LEVEL_NAMES[level] });
     show("game");
     render();
   }
@@ -395,7 +395,7 @@
   }
 
   function clearAll() {
-    if (!confirm("确定清除所有标记并重新开始吗？")) return;
+    if (!confirm(I18n.t("confirm.clearAll"))) return;
     pushHistory();
     cells = newCells();
     render();
@@ -403,15 +403,15 @@
 
   function submit() {
     const empty = cells.filter((c) => !c.value).length;
-    if (empty && !confirm(`还有 ${empty} 个空格未填，确定提交吗？`)) return;
+    if (empty && !confirm(I18n.t("confirm.submit", { n: empty }))) return;
     saveEnabled = false;
     clearSave();
     const wrong = cells.map((c, i) => c.value !== solution[i]);
     const ok = !wrong.some(Boolean);
-    $("result-title").textContent = ok ? "🎉 回答正确！" : "❌ 回答错误";
+    $("result-title").textContent = I18n.t(ok ? "result.ok" : "result.bad");
     $("result-detail").textContent = ok
-      ? "恭喜你，成功解出了这道数独！"
-      : `共有 ${wrong.filter(Boolean).length} 个格子有误或未填（红色标出）。`;
+      ? I18n.t("result.okDetail")
+      : I18n.t("result.badDetail", { n: wrong.filter(Boolean).length });
     const ans = $("answer");
     ans.innerHTML = "";
     solution.forEach((v, i) => {
@@ -432,13 +432,15 @@
     box.hidden = !rows.length;
     if (!rows.length) return;
     const h = document.createElement("h4");
-    h.textContent = "本题用到的技巧";
+    h.textContent = I18n.t("result.techs");
     box.appendChild(h);
     const sum = document.createElement("p");
     sum.className = "sub";
     const lv = SudokuSolver.classifyDifficulty(analysis);
-    sum.textContent = `难度 ${LEVEL_NAMES[lv]} ${"★".repeat(analysis.grade)}${"☆".repeat(5 - analysis.grade)}（难度分 ${analysis.rating}）。共 ${analysis.stepCount} 步推理，技巧总分 ${analysis.totalScore}，结构加分 ${analysis.complexityScore}，最高 Tier ${analysis.maxTier}` +
-      (analysis.maxChainLength ? `，最长推理链 ${analysis.maxChainLength} 个节点` : "") + "。";
+    sum.textContent = I18n.t("result.summary", {
+      level: LEVEL_NAMES[lv], stars: "★".repeat(analysis.grade) + "☆".repeat(5 - analysis.grade), rating: analysis.rating,
+      steps: analysis.stepCount, total: analysis.totalScore, cx: analysis.complexityScore, tier: analysis.maxTier,
+    }) + (analysis.maxChainLength ? I18n.t("result.chain", { n: analysis.maxChainLength }) : "") + I18n.t("result.end");
     box.appendChild(sum);
     const wrap = document.createElement("div");
     wrap.className = "tech-list";
@@ -446,8 +448,8 @@
       const b = document.createElement("button");
       b.className = "btn tech-item";
       b.innerHTML = "<span></span><span class=\"tier\"></span>";
-      b.children[0].textContent = `${t.name}${t.hardest ? " ★最难" : ""}`;
-      b.children[1].textContent = `Tier ${t.tier} · ${t.count} 次 · ${t.points} 分`;
+      b.children[0].textContent = t.name + (t.hardest ? I18n.t("result.hardest") : "");
+      b.children[1].textContent = I18n.t("result.techInfo", { tier: t.tier, count: t.count, points: t.points });
       b.addEventListener("click", () => showTechniqueHelp(t.key));
       wrap.appendChild(b);
     }
@@ -456,12 +458,12 @@
 
   document.querySelectorAll("[data-level]").forEach((b) =>
     b.addEventListener("click", () => {
-      if (loadSave() && !confirm("开始新游戏会覆盖已保存的进度，确定吗？")) return;
+      if (loadSave() && !confirm(I18n.t("confirm.overwrite"))) return;
       startGame(b.dataset.level);
     }));
   $("resume-btn").addEventListener("click", resumeGame);
   $("abandon").addEventListener("click", () => {
-    if (!confirm("确定放弃已保存的这一局吗？")) return;
+    if (!confirm(I18n.t("confirm.abandon"))) return;
     clearSave();
     refreshHome();
   });
@@ -471,7 +473,21 @@
   // 切到后台或关闭页面时再存一次（iPhone 切换应用时尤其重要）
   document.addEventListener("visibilitychange", () => { if (document.hidden) saveGame(); });
   window.addEventListener("pagehide", saveGame);
-  refreshHome();
+  // ---------- 多语言 ----------
+  function applyLang() {
+    document.documentElement.lang = { zh: "zh-CN", en: "en", fr: "fr" }[I18n.lang];
+    document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = I18n.t(el.dataset.i18n); });
+    document.querySelectorAll("[data-i18n-aria]").forEach((el) => el.setAttribute("aria-label", I18n.t(el.dataset.i18nAria)));
+    $("lang-select").value = I18n.lang;
+    closeModal();
+    $("home-msg").textContent = "";
+    if (!screens.tutorial.hidden) { if (tutorialKey) showTutorialDetail(tutorialKey); else showTutorialList(); }
+    if (!screens.game.hidden && analysis) $("game-title").textContent = I18n.t("game.title", { level: LEVEL_NAMES[level] });
+    refreshHome();
+  }
+  $("lang-select").addEventListener("change", (e) => I18n.setLang(e.target.value));
+  I18n.onChange(applyLang);
+  applyLang();
   for (let d = 1; d <= 9; d++) {
     const b = document.createElement("button");
     b.className = "btn";

@@ -33,7 +33,9 @@
     return out;
   };
   const rc = (i) => ({ row: rowOf(i), col: colOf(i) });
-  const unitName = (u) => (u < 9 ? `第${u + 1}行` : u < 18 ? `第${u - 8}列` : `第${u - 17}宫`);
+  const unitName = (u) => (u < 9 ? I18n.t("unit.row", { n: u + 1 }) : u < 18 ? I18n.t("unit.col", { n: u - 8 }) : I18n.t("unit.box", { n: u - 17 }));
+  const unitKind = (u) => I18n.t(u < 9 ? "kind.row" : u < 18 ? "kind.col" : "kind.box");
+  const L = (arr) => arr.join(I18n.t("sep")); // 列表分隔符随语言变化
 
   // 从 k 个元素中选 n 个的所有组合
   function combos(arr, n, fn) {
@@ -70,5 +72,5 @@
 
   const rcText = (i) => `R${rowOf(i) + 1}C${colOf(i) + 1}`;
   const cellHas = (s, c, d) => !s.values[c] && (s.cands[c] & (1 << d)) !== 0;
-  Object.assign(SolverKit, { UNITS, SEES, PEERS, POP, rowOf, colOf, boxOf, digitsOf, rc, unitName, combos, place, eliminate, rcText, cellHas });
+  Object.assign(SolverKit, { UNITS, SEES, PEERS, POP, rowOf, colOf, boxOf, digitsOf, rc, unitName, unitKind, L, combos, place, eliminate, rcText, cellHas });
 })();

@@ -128,7 +128,7 @@ const SudokuSolver = (() => {
     return Object.keys(analysis.techniqueUsage)
       .map((key) => {
         const cfg = TECHNIQUE_CONFIG[key], count = analysis.techniqueUsage[key];
-        return { key, name: cfg.name, nameEn: cfg.nameEn, tier: cfg.tier, score: cfg.score, count, points: cfg.score * count, hardest: key === analysis.hardestTechnique };
+        return { key, name: I18n.techName(key), nameEn: cfg.nameEn, tier: cfg.tier, score: cfg.score, count, points: cfg.score * count, hardest: key === analysis.hardestTechnique };
       })
       .sort((a, b) => b.tier - a.tier || b.score - a.score);
   }

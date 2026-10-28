@@ -1,6 +1,6 @@
 // 候选数关系图：强/弱链、AIC、X-Chain、XY-Chain、X-Cycle、分组链
 (() => {
-  const { UNITS, SEES, PEERS, POP, rowOf, colOf, boxOf, digitsOf, rc, unitName, combos, place, eliminate, rcText, cellHas, CHAIN_MAX_NODES } = SolverKit;
+  const { UNITS, SEES, PEERS, POP, rowOf, colOf, boxOf, digitsOf, rc, unitName, unitKind, L, combos, place, eliminate, rcText, cellHas, CHAIN_MAX_NODES } = SolverKit;
   // ---------- 链式推理引擎 ----------
   // 候选数关系图：节点 = 某格的某个候选数（n = 格*9 + 数字-1）。
   //  强链：两个候选数“恰有一个为真”（双候选格内两数；单元内某数字恰好两个位置）。
@@ -88,7 +88,7 @@
               }
               const loopText = path.map((x, i) => (i ? (i % 2 ? " = " : " – ") : "") + nodeText(x)).join("") + ` – ${nodeText(n0)}`;
               const lr = eliminate(s, loopTargets, [...inLoop], [d],
-                `X-Cycle 连续环：${loopText}。环上强弱链交替，每条弱链都等价于强链（两端恰有一个是 ${d}），因此同时看到某条弱链两端的格子不能是 ${d}`);
+                I18n.t("r.xcycle", { loop: loopText, d }));
               if (lr) return Object.assign(lr, { chain: path.map((n) => ({ cells: [nodeCell(n)], value: nodeDigit(n) })) });
               continue;
             }
@@ -100,7 +100,7 @@
             const chainText = path.map((x, i) => (i ? (i % 2 ? " = " : " – ") : "") + nodeText(x)).join("");
             const label = { xy: "XY-Chain", x: "X-Chain", aic: "AIC" }[mode];
             const r = eliminate(s, targets, cells, values,
-              `${label}：${chainText}（= 强链，– 弱链）。若 ${nodeText(n0)} 为假则链末端 ${nodeText(m)} 为真，所以两端至少一个为真，与两端都有弱链的候选数可排除`);
+              I18n.t("r.chain", { label, chain: chainText, n0: nodeText(n0), m: nodeText(m) }));
             if (r) return Object.assign(r, { chain: path.map((n) => ({ cells: [nodeCell(n)], value: nodeDigit(n) })) });
           }
         }
@@ -222,7 +222,7 @@
             const values = [...new Set(path.map((x) => nodes[x].d))];
             const chainText = path.map((x, i) => (i ? (i % 2 ? " = " : " – ") : "") + nText(x)).join("");
             const r = eliminate(s, targets, cells, values,
-              `分组链：${chainText}（含多格的分组节点；= 强链，– 弱链）。若 ${nText(n0)} 为假则末端 ${nText(m)} 为真，所以两端至少一个为真，与两端都有弱链的候选数可排除`);
+              I18n.t("r.gchain", { chain: chainText, n0: nText(n0), m: nText(m) }));
             if (r) return Object.assign(r, { chain: path.map((x) => ({ cells: nodes[x].cells, value: nodes[x].d })) });
           }
         }
