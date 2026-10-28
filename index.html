@@ -42,15 +42,17 @@
         <h2 id="game-title"></h2>
         <button class="btn" id="hint" data-i18n="game.hint"></button>
       </div>
-      <div id="board" class="board"></div>
-      <div id="pad" class="pad"></div>
-      <p class="tip" data-i18n="game.tip"></p>
-      <label class="toggle"><input type="checkbox" id="hl-toggle"><span class="track"></span><span data-i18n="game.highlight"></span></label>
-      <div class="actions">
-        <button class="btn" id="undo" data-i18n="game.undo"></button>
-        <button class="btn" id="clear-cell" data-i18n="game.clearCell"></button>
-        <button class="btn" id="clear-all" data-i18n="game.clearAll"></button>
-        <button class="btn primary" id="submit" data-i18n="game.submit"></button>
+      <div class="board-wrap"><div id="board" class="board"></div></div>
+      <div class="controls">
+        <div id="pad" class="pad"></div>
+        <p class="tip" data-i18n="game.tip"></p>
+        <label class="toggle"><input type="checkbox" id="hl-toggle"><span class="track"></span><span data-i18n="game.highlight"></span></label>
+        <div class="actions">
+          <button class="btn" id="undo" data-i18n="game.undo"></button>
+          <button class="btn" id="clear-cell" data-i18n="game.clearCell"></button>
+          <button class="btn" id="clear-all" data-i18n="game.clearAll"></button>
+          <button class="btn primary" id="submit" data-i18n="game.submit"></button>
+        </div>
       </div>
     </section>
 

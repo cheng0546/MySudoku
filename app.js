@@ -17,6 +17,7 @@
   let saveEnabled = false; // 仅在棋盘进行中时自动保存
   const show = (name) => {
     for (const k in screens) screens[k].hidden = k !== name;
+    document.body.classList.toggle("playing", name === "game");
     if (name === "home") refreshHome();
   };
 

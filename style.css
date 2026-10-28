@@ -65,15 +65,30 @@ h1 { margin-top: 15vh; font-size: 2.4rem; }
 .tip { color: #667; font-size: .9rem; line-height: 1.6; margin: 8px 0; }
 #board { touch-action: manipulation; -webkit-touch-callout: none; }
 
-/* 游戏界面自适应：占满屏幕高度，棋盘在剩余空间内居中，操作区贴底 */
+/* 游戏界面：整屏显示不滚动。竖屏：棋盘在上、操作区在下；横屏：棋盘在左、操作区竖排在右 */
 main { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; padding-bottom: max(16px, env(safe-area-inset-bottom)); }
 .screen:not([hidden]) { flex: 1; }
-#game:not([hidden]) { display: flex; flex-direction: column; }
-#game .topbar { margin-bottom: 14px; }
-#game #board { width: 100%; margin: 14px 0; }
-#game .pad .btn { padding: clamp(10px, 2.4dvh, 18px) 0; }
-#game .actions { margin-bottom: 0; gap: 8px; flex-wrap: nowrap; }
+body.playing { overflow: hidden; }
+body.playing main { height: 100vh; height: 100dvh; max-width: 720px; padding: 10px 16px max(12px, env(safe-area-inset-bottom)); }
+#game:not([hidden]) { display: flex; flex-direction: column; min-height: 0; }
+#game .topbar { margin-bottom: 8px; }
+.board-wrap { flex: 1; min-height: 0; container-type: size; display: flex; align-items: center; justify-content: center; }
+#game #board { width: 100%; width: min(100cqw, 100cqh); margin: 0; }
+.controls { flex: none; padding-top: 6px; }
+#game .pad .btn { padding: clamp(8px, 2dvh, 18px) 0; }
+#game .actions { margin: 6px 0 0; gap: 8px; flex-wrap: nowrap; }
 #game .actions .btn { flex: 1 1 0; min-width: 0; padding: 10px 4px; font-size: clamp(.8rem, 3.4vw, 1rem); }
+#game .tip { margin: 6px 0; }
+@media (orientation: landscape) and (min-aspect-ratio: 5/4) {
+  body.playing main { max-width: 1100px; }
+  #game:not([hidden]) { display: grid; grid-template-columns: minmax(0, 1fr) clamp(220px, 32vw, 360px); grid-template-rows: auto minmax(0, 1fr); column-gap: 24px; }
+  #game .topbar { grid-column: 1 / -1; }
+  .controls { align-self: center; max-height: 100%; overflow-y: auto; padding: 0; }
+  #game .pad { grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0 0 8px; }
+  #game .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  #game .actions .btn { font-size: 1rem; }
+}
+@media (max-height: 480px) { #game .tip { display: none; } }
 
 /* 技巧教学 */
 .learn { margin-top: 12px; width: 100%; padding: 14px; font-size: 1.05rem; }
