@@ -5,9 +5,11 @@ const path = require("path");
 const vm = require("vm");
 
 const root = path.join(__dirname, "..");
-for (const [file, name] of [["solver.js", "SudokuSolver"], ["sudoku.js", "SudokuGen"]]) {
-  vm.runInThisContext(`${fs.readFileSync(path.join(root, file), "utf8")}\nglobalThis.${name} = ${name};`);
+const SOLVER_FILES = ["config", "help", "core", "patterns", "chains", "als", "forcing", "analyze"].map((n) => `solver/${n}.js`);
+for (const [file, name] of [...SOLVER_FILES.map((f) => [f, null]), ["sudoku.js", "SudokuGen"]]) {
+  vm.runInThisContext(`${fs.readFileSync(path.join(root, file), "utf8")}\n${name ? `globalThis.${name} = ${name};` : ""}`);
 }
+vm.runInThisContext("globalThis.SudokuSolver = SudokuSolver;");
 
 const N = +process.argv[2] || 20;
 const { TECHNIQUE_CONFIG, DIFFICULTY_CONFIG, analyzeSudoku, classifyDifficulty } = SudokuSolver;

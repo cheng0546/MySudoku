@@ -1,10 +1,17 @@
-﻿// 修改缓存文件后请递增版本号，以便客户端更新
-const CACHE = "mysudoku-v12";
+// ?????????????,???????
+const CACHE = "mysudoku-v13";
 const ASSETS = [
   "./",
   "index.html",
   "style.css",
-  "solver.js",
+  "solver/config.js",
+  "solver/help.js",
+  "solver/core.js",
+  "solver/patterns.js",
+  "solver/chains.js",
+  "solver/als.js",
+  "solver/forcing.js",
+  "solver/analyze.js",
   "tutorial.js",
   "sudoku.js",
   "app.js",
@@ -26,7 +33,7 @@ self.addEventListener("activate", (e) => {
   );
 });
 
-// 优先网络，失败时使用缓存（离线可用，同时能及时获取更新）
+// ????,???????(????,?????????)
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
   e.respondWith(
