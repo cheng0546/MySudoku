@@ -13,6 +13,16 @@ A web-based Sudoku game for learning and improving solving techniques. Every puz
 - Result screen showing the full answer, correctness (wrong cells highlighted), retry, and back to home
 - Keyboard support: `1-9` to fill, `Backspace`/`Delete` to clear, `Ctrl+Z` to undo, arrow keys to move
 
+## Install as an app (PWA)
+
+MySudoku is a Progressive Web App and works offline after the first visit. Over HTTPS (e.g. on Render) or `localhost`:
+
+- **Desktop Chrome/Edge**: click the install icon in the address bar.
+- **Android Chrome**: menu → *Install app* / *Add to Home screen*.
+- **iOS Safari**: Share → *Add to Home Screen*.
+
+When you change cached files, bump `CACHE` in `sw.js` so clients pick up the update.
+
 ## Roadmap
 
 - Solving-technique algorithms (e.g. naked/hidden pairs, X-Wing)
@@ -49,3 +59,4 @@ Static sites on Render's free plan are not spun down, so there are no cold start
 | `style.css` | Styles |
 | `sudoku.js` | Puzzle generator and unique-solution solver |
 | `app.js` | UI logic and game state |
+| `manifest.webmanifest`, `sw.js`, `icons/` | PWA manifest, service worker (offline cache), app icons |
