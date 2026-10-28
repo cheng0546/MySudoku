@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>数独练习</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <section id="home" class="screen">
+      <h1>数独练习</h1>
+      <p class="sub">选择难度，开始一局唯一解数独</p>
+      <div class="levels">
+        <button class="btn primary" data-level="easy">简单</button>
+        <button class="btn primary" data-level="medium">中等</button>
+        <button class="btn primary" data-level="hard">困难</button>
+      </div>
+    </section>
+
+    <section id="game" class="screen" hidden>
+      <h2 id="game-title"></h2>
+      <div id="board" class="board"></div>
+      <div class="modes">
+        <button class="btn mode active" data-mode="value">确定数字</button>
+        <button class="btn mode" data-mode="note">待定数字</button>
+      </div>
+      <div id="pad" class="pad"></div>
+      <div class="actions">
+        <button class="btn" id="undo">撤销</button>
+        <button class="btn" id="clear-cell">清除此格</button>
+        <button class="btn" id="clear-all">重新开始</button>
+        <button class="btn primary" id="submit">提交</button>
+      </div>
+    </section>
+
+    <section id="result" class="screen" hidden>
+      <h2 id="result-title"></h2>
+      <p id="result-detail" class="sub"></p>
+      <div id="answer" class="board small"></div>
+      <div class="actions">
+        <button class="btn primary" id="retry">重做一次</button>
+        <button class="btn" id="home-btn">返回首页</button>
+      </div>
+    </section>
+  </main>
+  <script src="sudoku.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

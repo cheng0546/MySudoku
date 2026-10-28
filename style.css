@@ -1,0 +1,33 @@
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "Microsoft YaHei", system-ui, sans-serif; background: #f2f5fa; color: #222; }
+main { max-width: 520px; margin: 0 auto; padding: 16px; }
+.screen { text-align: center; }
+[hidden] { display: none !important; }
+h1 { margin-top: 15vh; font-size: 2.4rem; }
+.sub { color: #667; }
+.levels { display: flex; flex-direction: column; gap: 12px; margin-top: 28px; }
+
+.btn { padding: 10px 16px; font-size: 1rem; border: 1px solid #b8c2d6; background: #fff; border-radius: 8px; cursor: pointer; font-family: inherit; }
+.btn:hover { background: #eaf0fb; }
+.btn.primary { background: #3a6fd8; color: #fff; border-color: #3a6fd8; }
+.btn.primary:hover { background: #2f5dbb; }
+.btn.mode.active { background: #3a6fd8; color: #fff; border-color: #3a6fd8; }
+.levels .btn { padding: 14px; font-size: 1.15rem; }
+
+.board { display: grid; grid-template-columns: repeat(9, 1fr); width: 100%; aspect-ratio: 1; margin: 12px 0; border: 2px solid #222; background: #fff; }
+.cell { position: relative; display: flex; align-items: center; justify-content: center; border: 1px solid #ccd; font-size: clamp(1.1rem, 5vw, 1.8rem); cursor: pointer; user-select: none; }
+.cell:nth-child(9n+3), .cell:nth-child(9n+6) { border-right: 2px solid #222; }
+.cell:nth-child(n+19):nth-child(-n+27), .cell:nth-child(n+46):nth-child(-n+54) { border-bottom: 2px solid #222; }
+.cell.given { font-weight: bold; background: #eef1f6; }
+.cell.user { color: #2a5bd7; }
+.cell.related { background: #e6eefc; }
+.cell.same { background: #cfdcf7; }
+.cell.selected { background: #a9c1f5; }
+.cell.wrong { background: #ffd2d2; color: #c00; }
+.notes { display: grid; grid-template-columns: repeat(3, 1fr); width: 100%; height: 100%; font-size: clamp(.5rem, 2.2vw, .8rem); color: #556; }
+.notes span { display: flex; align-items: center; justify-content: center; }
+
+.modes, .actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 10px 0; }
+.pad { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; margin: 10px 0; }
+.pad .btn { padding: 10px 0; font-size: 1.2rem; }
+.board.small .cell { cursor: default; }
