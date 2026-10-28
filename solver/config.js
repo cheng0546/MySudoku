@@ -37,6 +37,20 @@ const SolverKit = {};
       easyMaxScore: 100,    // Tier 1 且分数 ≤ 此值 → 简单，否则中等
       mediumMaxScore: 260,  // Tier 2 且分数 ≤ 此值 → 中等，否则困难
     },
+    // 结构复杂度加分（仅 Tier 3+ 步骤）：用于区分同一等级内的难易，不改变四级分类。
+    complexity: {
+      chainFreeNodes: 3,   // 链长（节点数）不超过此值不加分
+      chainNode: 2,        // 超出部分每个节点加分
+      alsExtraCell: 2,     // 链/ALS 节点中，每多一个格子（ALS 大小 - 1）加分
+      forcingStep: 10,     // 每次强制链额外加分（多分支推理）
+    },
+    // 等级内细分（1–5 星）：按 难度分 = 技巧总分 + 结构加分 的下限划分，每级一组下限。
+    grades: {
+      easy:   [0, 38, 42, 46, 50],
+      medium: [0, 60, 70, 80, 90],
+      hard:   [0, 90, 110, 140, 170],
+      expert: [0, 150, 250, 400, 600],
+    },
     // 挖空目标（保留的提示数范围）。仅用于生成，最终难度由逻辑求解器确认。
     clues: { easy: [38, 45], medium: [30, 36], hard: [24, 30], expert: [17, 26] },
     maxAttempts: 4000,

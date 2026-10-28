@@ -1,4 +1,4 @@
-﻿# MySudoku
+# MySudoku
 
 A web-based Sudoku game for learning and improving solving techniques. Every puzzle is generated with a **unique solution**. The UI is currently in Chinese (multi-language support is planned).
 
@@ -25,7 +25,7 @@ When you change cached files, bump `CACHE` in `sw.js` so clients pick up the upd
 
 ## Difficulty system
 
-Difficulty is determined by a logic solver (`solver.js`), not by the number of clues. Backtracking is only used to build solved grids and check uniqueness; the solver never guesses.
+Difficulty is determined by a logic solver (`solver/`), not by the number of clues. Backtracking is only used to build solved grids and check uniqueness; the solver never guesses.
 
 | Tier | Techniques | Result |
 | --- | --- | --- |
@@ -34,7 +34,7 @@ Difficulty is determined by a logic solver (`solver.js`), not by the number of c
 | 3 | X-Wing (12), Skyscraper (13), Two-String Kite (13), XY-Wing (14), Finned X-Wing (15), Unique Rectangle type 1 (16) | Hard |
 | 4 | XYZ-Wing (18), Swordfish (20), X-Chain (21), XY-Chain (22), Jellyfish (25), X-Cycle (23), AIC (26), Sue de Coq (27), ALS-XZ (28), ALS Chain (30), Grouped AIC (29), Forcing Chain (32) | Expert |
 
-The classification uses the highest tier actually used plus the total score (see `TECHNIQUE_CONFIG` and `DIFFICULTY_CONFIG` in `solver.js`). Puzzles the solver cannot finish are discarded. Generation retries until the target level is met, with attempt and time limits.
+The classification uses the highest tier actually used plus the total score (see `TECHNIQUE_CONFIG` and `DIFFICULTY_CONFIG` in `solver/config.js`). Within each level a 1–5 star grade is derived from a rating = technique score + structural bonus (chain length, ALS size, forcing chains; see `DIFFICULTY_CONFIG.complexity` / `grades`). Puzzles the solver cannot finish are discarded. Generation retries until the target level is met, with attempt and time limits.
 
 Test the generator: `node tools/test-difficulty.js 50`
 
@@ -72,7 +72,7 @@ Static sites on Render's free plan are not spun down, so there are no cold start
 | --- | --- |
 | `index.html` | Page structure (home, game, result screens) |
 | `style.css` | Styles |
-| `solver.js` | Logic solver, technique/difficulty config, difficulty classification |
+| `solver/` | Modular logic solver: `config` (scores, thresholds, grades), `help`, `core`, `patterns`, `chains`, `als`, `forcing`, `analyze` (analysis, classification, rating) |
 | `sudoku.js` | Puzzle generator and unique-solution backtracking solver |
 | `tools/test-difficulty.js` | Node script to test difficulty generation |
 | `app.js` | UI logic and game state |

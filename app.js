@@ -305,7 +305,8 @@
     box.appendChild(h);
     const sum = document.createElement("p");
     sum.className = "sub";
-    sum.textContent = `共 ${analysis.stepCount} 步逻辑推理，技巧总分 ${analysis.totalScore}，最高 Tier ${analysis.maxTier}` +
+    const lv = SudokuSolver.classifyDifficulty(analysis);
+    sum.textContent = `难度 ${LEVEL_NAMES[lv]} ${"★".repeat(analysis.grade)}${"☆".repeat(5 - analysis.grade)}（难度分 ${analysis.rating}）。共 ${analysis.stepCount} 步推理，技巧总分 ${analysis.totalScore}，结构加分 ${analysis.complexityScore}，最高 Tier ${analysis.maxTier}` +
       (analysis.maxChainLength ? `，最长推理链 ${analysis.maxChainLength} 个节点` : "") + "。";
     box.appendChild(sum);
     const wrap = document.createElement("div");

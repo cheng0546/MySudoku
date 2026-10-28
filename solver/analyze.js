@@ -12,7 +12,7 @@ const SudokuSolver = (() => {
   }
 
   function emptyResult(error) {
-    return { solved: false, error, maxTier: 0, totalScore: 0, stepCount: 0, advancedStepCount: 0, maxChainLength: 0, hardestTechnique: null, techniqueUsage: {}, steps: [] };
+    return { solved: false, error, maxTier: 0, totalScore: 0, stepCount: 0, advancedStepCount: 0, maxChainLength: 0, maxAlsSize: 0, complexityScore: 0, rating: 0, grade: 0, hardestTechnique: null, techniqueUsage: {}, steps: [] };
   }
 
   // 分析题目：只用已实现的逻辑技巧求解。不修改传入的 puzzle。
@@ -32,6 +32,7 @@ const SudokuSolver = (() => {
       for (const p of PEERS[i]) if (values[p]) used |= 1 << values[p];
       cands[i] = ~used & 0x3fe;
     }
+    const cx = DIFFICULTY_CONFIG.complexity;
     const state = { values, cands };
     const result = emptyResult(null);
     let filled = values.filter(Boolean).length;
@@ -75,7 +76,15 @@ const SudokuSolver = (() => {
       result.maxTier = Math.max(result.maxTier, cfg.tier);
       result.stepCount++;
       if (cfg.tier >= 3) result.advancedStepCount++;
-      if (step.chain) result.maxChainLength = Math.max(result.maxChainLength, step.chain.length);
+      if (step.chain) {
+        result.maxChainLength = Math.max(result.maxChainLength, step.chain.length);
+        const alsCells = step.chain.reduce((n, nd) => n + nd.cells.length - 1, 0);
+        result.maxAlsSize = Math.max(result.maxAlsSize, ...step.chain.map((nd) => nd.cells.length));
+        if (cfg.tier >= 3) {
+          result.complexityScore += Math.max(0, step.chain.length - cx.chainFreeNodes) * cx.chainNode + alsCells * cx.alsExtraCell;
+        }
+      }
+      if (tech === "forcing_chain") result.complexityScore += cx.forcingStep;
       if (!result.hardestTechnique || cfg.score > TECHNIQUE_CONFIG[result.hardestTechnique].score) result.hardestTechnique = tech;
       result.techniqueUsage[tech] = (result.techniqueUsage[tech] || 0) + 1;
 
@@ -84,6 +93,11 @@ const SudokuSolver = (() => {
 
     result.solved = filled === 81;
     if (!result.solved) result.error = "stuck";
+    else {
+      result.rating = result.totalScore + result.complexityScore;
+      const level = classifyDifficulty(result);
+      result.grade = DIFFICULTY_CONFIG.grades[level].filter((min) => result.rating >= min).length;
+    }
     return result;
   }
 
