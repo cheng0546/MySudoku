@@ -289,7 +289,37 @@
       el.textContent = v;
       ans.appendChild(el);
     });
+    renderResultTechniques();
     show("result");
+  }
+
+  // 结算页：显示本题实际用到的技巧（来自逻辑求解器的真实记录），点击可查看讲解
+  function renderResultTechniques() {
+    const box = $("result-techs");
+    box.innerHTML = "";
+    const rows = SudokuSolver.summarizeTechniques(analysis);
+    box.hidden = !rows.length;
+    if (!rows.length) return;
+    const h = document.createElement("h4");
+    h.textContent = "本题用到的技巧";
+    box.appendChild(h);
+    const sum = document.createElement("p");
+    sum.className = "sub";
+    sum.textContent = `共 ${analysis.stepCount} 步逻辑推理，技巧总分 ${analysis.totalScore}，最高 Tier ${analysis.maxTier}` +
+      (analysis.maxChainLength ? `，最长推理链 ${analysis.maxChainLength} 个节点` : "") + "。";
+    box.appendChild(sum);
+    const wrap = document.createElement("div");
+    wrap.className = "tech-list";
+    for (const t of rows) {
+      const b = document.createElement("button");
+      b.className = "btn tech-item";
+      b.innerHTML = "<span></span><span class=\"tier\"></span>";
+      b.children[0].textContent = `${t.name}${t.hardest ? " ★最难" : ""}`;
+      b.children[1].textContent = `Tier ${t.tier} · ${t.count} 次 · ${t.points} 分`;
+      b.addEventListener("click", () => showTechniqueHelp(t.key));
+      wrap.appendChild(b);
+    }
+    box.appendChild(wrap);
   }
 
   document.querySelectorAll("[data-level]").forEach((b) =>

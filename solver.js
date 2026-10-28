@@ -24,6 +24,7 @@ const SudokuSolver = (() => {
     x_cycle:           { name: "X-Cycle 连续环", nameEn: "X-Cycle",       tier: 4, score: 23 },
     sue_de_coq:        { name: "Sue de Coq", nameEn: "Sue de Coq",        tier: 4, score: 27 },
     als_xz:            { name: "ALS-XZ",     nameEn: "ALS-XZ",            tier: 4, score: 28 },
+    als_chain:         { name: "ALS 链",     nameEn: "ALS Chain",         tier: 4, score: 30 },
     aic:               { name: "交替推理链 AIC", nameEn: "Alternating Inference Chain", tier: 4, score: 26 },
     grouped_aic:       { name: "分组链 Grouped AIC", nameEn: "Grouped AIC", tier: 4, score: 29 },
     forcing_chain:     { name: "强制链 Forcing Chain", nameEn: "Forcing Chain", tier: 4, score: 32 },
@@ -135,6 +136,11 @@ const SudokuSolver = (() => {
       summary: "ALS（几乎锁定集）是同一单元里 n 个格、共 n+1 个候选数的格子集合。两个 ALS 通过“限制数字”X 关联，可以排除它们共有的另一个数字 Z。",
       how: "找两个互不重叠的 ALS：A、B。若两者都含 X，且 A 中所有含 X 的格与 B 中所有含 X 的格两两互相看到（X 是限制数字），那么 A、B 至多一边含 X。另一边失去 X 后变成 n 格装 n 个数字，必然含有另一个共有数字 Z。因此同时看到 A、B 中所有 Z 的格子不能是 Z。",
       example: "A={R1C1(1,2)}（双候选格），B={R1C5,R1C8(1,3,4 共三个数两个格)}，X=1 是限制数字，共有数字 Z=2 或 3 可被排除。",
+    },
+    als_chain: {
+      summary: "把 3～4 个 ALS 首尾相接成链，相邻两个靠各自的限制数字连接。链两端若含同一数字 Z，就能排除同时看到两端所有 Z 的格子。",
+      how: "ALS-XZ 是两个 ALS 的情形。把它延长：A –x1– B –x2– C，其中 x1≠x2。若 A 不含 Z，则 A 变成锁定集，把 x1 逼到 B 之外，B 变成锁定集，把 x2 逼到 C 之外……最终 C 必含 Z。所以 A、C 至少一个含 Z（Z 不能是两端的限制数字）。",
+      example: "A、B、C 三个 ALS 依次靠限制数字 1、2 相连，A 与 C 都含 3，则同时看到两者所有 3 的格子不能是 3。",
     },
     sue_de_coq: {
       summary: "行（列）与宫的交叉区 2～3 个格拥有多于格数的候选数。再从该行（列）和该宫的其余格各找一组，把交叉区的数字“分摊”后，可排除很多候选数。",
@@ -374,6 +380,7 @@ const SudokuSolver = (() => {
     x_cycle: (s) => chainSearch(s, "xcycle"),
     grouped_aic: groupedSearch,
     als_xz: alsXZ,
+    als_chain: alsChain,
     sue_de_coq: sueDeCoq,
     forcing_chain: forcingChain,
   };
@@ -836,10 +843,82 @@ const SudokuSolver = (() => {
             }
             const r = eliminate(s, targets, [...A.cells, ...B.cells], [x, z],
               `ALS-XZ：A=${A.cells.map(rcText).join("、")}（${A.cells.length} 格含数字 ${digitsOf(A.mask).join("")}），B=${B.cells.map(rcText).join("、")}（${B.cells.length} 格含数字 ${digitsOf(B.mask).join("")}）。限制数字 ${x}：A、B 中至多一边是 ${x}，另一边成为锁定集，必含 ${z}。同时看到所有 ${z} 的格子排除 ${z}`);
-            if (r) return r;
+            if (r) return Object.assign(r, { chain: [A, B].map((a, k) => ({ cells: a.cells, value: k ? 0 : x })) });
           }
         }
       }
+    }
+    return null;
+  }
+
+  // ---------- ALS 链 ----------
+  // 3～4 个互不重叠的 ALS 首尾相接，相邻两个有各自的限制数字（相邻限制数字不同）。
+  // 链两端的 ALS 若含同一数字 Z（Z 不等于两端的限制数字），则两端至少一个含 Z，
+  // 同时看到两端所有 Z 的格子排除 Z。
+  function alsChain(s) {
+    const list = findALSList(s);
+    const N = list.length;
+    if (N < 3) return null;
+    const dc = list.map((a) => {
+      const m = {};
+      for (const d of digitsOf(a.mask)) m[d] = a.cells.filter((c) => cellHas(s, c, d));
+      return m;
+    });
+    const disjoint = (a, b) => !a.cells.some((c) => b.cells.includes(c));
+    // adj[i] = [[j, x], ...]：ALS i 与 j 以限制数字 x 相连
+    const adj = Array.from({ length: N }, () => []);
+    for (let i = 0; i < N; i++) {
+      for (let j = i + 1; j < N; j++) {
+        const common = list[i].mask & list[j].mask;
+        if (!common || !disjoint(list[i], list[j])) continue;
+        for (const x of digitsOf(common)) {
+          if (dc[i][x].every((a) => dc[j][x].every((b) => SEES[a][b]))) {
+            adj[i].push([j, x]);
+            adj[j].push([i, x]);
+          }
+        }
+      }
+    }
+    let budget = 300000;
+    const MAX_ALS = 4;
+    const chain = [], rcc = [];
+    const check = () => {
+      const A = list[chain[0]], B = list[chain[chain.length - 1]];
+      const common = A.mask & B.mask;
+      for (const z of digitsOf(common)) {
+        if (z === rcc[0] || z === rcc[rcc.length - 1]) continue;
+        const zc = [...A.cells, ...B.cells].filter((c) => cellHas(s, c, z));
+        const targets = [];
+        for (let c = 0; c < 81; c++) {
+          if (cellHas(s, c, z) && !A.cells.includes(c) && !B.cells.includes(c) && zc.every((q) => SEES[c][q])) targets.push([c, z]);
+        }
+        const cells = [...new Set(chain.flatMap((i) => list[i].cells))];
+        const text = chain.map((i, k) => `{${list[i].cells.map(rcText).join(" ")}}` + (k < rcc.length ? ` –${rcc[k]}– ` : "")).join("");
+        const r = eliminate(s, targets, cells, [...new Set([...rcc, z])],
+          `ALS 链：${text}。相邻 ALS 通过限制数字（括号间数字）相连，两端 ALS 必有一个含 ${z}。同时看到两端所有 ${z} 的格子排除 ${z}`);
+        if (r) return Object.assign(r, { chain: chain.map((i, k) => ({ cells: list[i].cells, value: rcc[k] || 0 })) });
+      }
+      return null;
+    };
+    const dfs = () => {
+      if (--budget < 0) return null;
+      const last = chain[chain.length - 1];
+      for (const [j, x] of adj[last]) {
+        if (x === rcc[rcc.length - 1] || chain.some((i) => i === j || !disjoint(list[i], list[j]))) continue;
+        chain.push(j);
+        rcc.push(x);
+        const r = (chain.length >= 3 ? check() : null) || (chain.length < MAX_ALS ? dfs() : null);
+        chain.pop();
+        rcc.pop();
+        if (r) return r;
+      }
+      return null;
+    };
+    for (let i = 0; i < N; i++) {
+      chain.push(i);
+      const r = dfs();
+      chain.pop();
+      if (r) return r;
     }
     return null;
   }
@@ -999,7 +1078,7 @@ const SudokuSolver = (() => {
   }
 
   function emptyResult(error) {
-    return { solved: false, error, maxTier: 0, totalScore: 0, stepCount: 0, advancedStepCount: 0, techniqueUsage: {}, steps: [] };
+    return { solved: false, error, maxTier: 0, totalScore: 0, stepCount: 0, advancedStepCount: 0, maxChainLength: 0, hardestTechnique: null, techniqueUsage: {}, steps: [] };
   }
 
   // 分析题目：只用已实现的逻辑技巧求解。不修改传入的 puzzle。
@@ -1062,6 +1141,8 @@ const SudokuSolver = (() => {
       result.maxTier = Math.max(result.maxTier, cfg.tier);
       result.stepCount++;
       if (cfg.tier >= 3) result.advancedStepCount++;
+      if (step.chain) result.maxChainLength = Math.max(result.maxChainLength, step.chain.length);
+      if (!result.hardestTechnique || cfg.score > TECHNIQUE_CONFIG[result.hardestTechnique].score) result.hardestTechnique = tech;
       result.techniqueUsage[tech] = (result.techniqueUsage[tech] || 0) + 1;
 
       if (hasContradiction()) { result.error = "contradiction"; return result; }
@@ -1082,5 +1163,16 @@ const SudokuSolver = (() => {
     return analysis.totalScore > t.easyMaxScore ? "medium" : "easy";
   }
 
-  return { TECHNIQUE_CONFIG, TECHNIQUE_HELP, DIFFICULTY_CONFIG, analyzeSudoku, classifyDifficulty };
+  // 技巧汇总（教学与结算页共用）：按等级、分数排序，包含使用次数、占总分比例和最难标记
+  function summarizeTechniques(analysis) {
+    if (!analysis || !analysis.techniqueUsage) return [];
+    return Object.keys(analysis.techniqueUsage)
+      .map((key) => {
+        const cfg = TECHNIQUE_CONFIG[key], count = analysis.techniqueUsage[key];
+        return { key, name: cfg.name, nameEn: cfg.nameEn, tier: cfg.tier, score: cfg.score, count, points: cfg.score * count, hardest: key === analysis.hardestTechnique };
+      })
+      .sort((a, b) => b.tier - a.tier || b.score - a.score);
+  }
+
+  return { TECHNIQUE_CONFIG, TECHNIQUE_HELP, DIFFICULTY_CONFIG, analyzeSudoku, classifyDifficulty, summarizeTechniques };
 })();
