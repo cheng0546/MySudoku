@@ -160,6 +160,10 @@
   $("retry").addEventListener("click", resetBoard);
   $("home-btn").addEventListener("click", () => show("home"));
 
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  }
+
   document.addEventListener("keydown", (e) => {
     if (screens.game.hidden) return;
     if (/^[1-9]$/.test(e.key)) input(+e.key);
