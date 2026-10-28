@@ -1,5 +1,5 @@
 // 修改缓存文件后请递增版本号，以便客户端更新
-const CACHE = "mysudoku-v8";
+const CACHE = "mysudoku-v9";
 const ASSETS = [
   "./",
   "index.html",
