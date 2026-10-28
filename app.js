@@ -9,7 +9,8 @@
   let selected = -1;
   let mode = "value";
   let history = [];
-
+  let analysis = null; // 当前题目的逻辑分析结果（含使用到的技巧）
+  let genToken = 0;    // 用于忽略已被取消的生成请求
   const show = (name) => {
     for (const k in screens) screens[k].hidden = k !== name;
   };
@@ -27,10 +28,13 @@
   function startGame(lv) {
     level = lv;
     $("home-msg").textContent = "";
+    analysis = null;
+    const token = ++genToken;
     $("game-title").textContent = "生成中…";
     show("game");
     // 延迟一帧让界面先刷新，再进行耗时的生成
     setTimeout(() => {
+      if (token !== genToken) return;
       const r = SudokuGen.generatePuzzle(lv);
       if (!r.ok) {
         const why = r.reason === "timeout" ? "生成超时" : "多次尝试仍未生成符合要求的题目";
@@ -38,9 +42,75 @@
         show("home");
         return;
       }
-      ({ puzzle, solution } = r);
+      ({ puzzle, solution, analysis } = r);
       resetBoard();
     }, 30);
+  }
+
+  function goHome() {
+    if (!screens.game.hidden && history.length && !confirm("返回首页将放弃当前进度，确定吗？")) return;
+    genToken++;
+    closeModal();
+    show("home");
+  }
+
+  // ---------- 技巧提示 ----------
+  const modal = $("hint-modal");
+
+  function closeModal() {
+    modal.hidden = true;
+  }
+
+  function openModal(title, backToList) {
+    $("modal-title").textContent = title;
+    $("modal-back").hidden = !backToList;
+    $("modal-body").innerHTML = "";
+    $("modal-body").className = "";
+    modal.hidden = false;
+  }
+
+  function showTechniqueList() {
+    openModal("本题可能用到的技巧", false);
+    const body = $("modal-body");
+    const usage = analysis ? analysis.techniqueUsage : {};
+    const list = Object.keys(SudokuSolver.TECHNIQUE_CONFIG).filter((t) => usage[t]);
+    if (!list.length) {
+      body.textContent = "题目尚未生成。";
+      return;
+    }
+    const tip = document.createElement("p");
+    tip.className = "sub";
+    tip.textContent = "点击技巧查看讲解：";
+    body.appendChild(tip);
+    const wrap = document.createElement("div");
+    wrap.className = "tech-list";
+    for (const t of list) {
+      const cfg = SudokuSolver.TECHNIQUE_CONFIG[t];
+      const b = document.createElement("button");
+      b.className = "btn tech-item";
+      b.innerHTML = `<span></span><span class="tier"></span>`;
+      b.children[0].textContent = cfg.name;
+      b.children[1].textContent = `Tier ${cfg.tier}`;
+      b.addEventListener("click", () => showTechniqueHelp(t));
+      wrap.appendChild(b);
+    }
+    body.appendChild(wrap);
+  }
+
+  function showTechniqueHelp(t) {
+    const cfg = SudokuSolver.TECHNIQUE_CONFIG[t];
+    const help = SudokuSolver.TECHNIQUE_HELP[t];
+    openModal(`${cfg.name}（${cfg.nameEn}）`, true);
+    const body = $("modal-body");
+    body.className = "help";
+    for (const [label, text, cls] of [["原理", help.summary], ["方法", help.how], ["例子", help.example, "example"]]) {
+      const p = document.createElement("p");
+      if (cls) p.className = cls;
+      const strong = document.createElement("strong");
+      strong.textContent = label + "：";
+      p.append(strong, text);
+      body.appendChild(p);
+    }
   }
 
   function resetBoard() {
@@ -180,6 +250,11 @@
   $("submit").addEventListener("click", submit);
   $("retry").addEventListener("click", resetBoard);
   $("home-btn").addEventListener("click", () => show("home"));
+  $("back").addEventListener("click", goHome);
+  $("hint").addEventListener("click", showTechniqueList);
+  $("modal-back").addEventListener("click", showTechniqueList);
+  $("modal-close").addEventListener("click", closeModal);
+  modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
 
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
@@ -187,6 +262,10 @@
 
   document.addEventListener("keydown", (e) => {
     if (screens.game.hidden) return;
+    if (!modal.hidden) {
+      if (e.key === "Escape") closeModal();
+      return;
+    }
     if (/^[1-9]$/.test(e.key)) input(+e.key);
     else if (e.key === "Backspace" || e.key === "Delete") clearCell();
     else if ((e.ctrlKey || e.metaKey) && e.key === "z") undo();

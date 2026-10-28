@@ -27,7 +27,11 @@
     </section>
 
     <section id="game" class="screen" hidden>
-      <h2 id="game-title"></h2>
+      <div class="topbar">
+        <button class="btn" id="back">← 返回</button>
+        <h2 id="game-title"></h2>
+        <button class="btn" id="hint">💡 提示</button>
+      </div>
       <div id="board" class="board"></div>
       <div class="modes">
         <button class="btn mode active" data-mode="value">确定数字</button>
@@ -52,6 +56,15 @@
       </div>
     </section>
   </main>
+
+  <div id="hint-modal" class="modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <button class="modal-close" id="modal-close" aria-label="关闭">×</button>
+      <button class="btn modal-back" id="modal-back" hidden>← 技巧列表</button>
+      <h3 id="modal-title"></h3>
+      <div id="modal-body"></div>
+    </div>
+  </div>
   <script src="solver.js"></script>
   <script src="sudoku.js"></script>
   <script src="app.js"></script>

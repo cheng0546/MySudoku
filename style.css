@@ -34,3 +34,18 @@ h1 { margin-top: 15vh; font-size: 2.4rem; }
 .pad { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; margin: 10px 0; }
 .pad .btn { padding: 10px 0; font-size: 1.2rem; }
 .board.small .cell { cursor: default; }
+
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.topbar h2 { margin: 0; font-size: 1.2rem; }
+.topbar .btn { padding: 6px 12px; font-size: .95rem; }
+
+.modal { position: fixed; inset: 0; background: rgba(0, 0, 0, .45); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
+.modal-box { position: relative; width: 100%; max-width: 420px; max-height: 80vh; overflow-y: auto; background: #fff; border-radius: 12px; padding: 20px; text-align: left; }
+.modal-box h3 { margin: 0 0 12px; padding-right: 28px; }
+.modal-close { position: absolute; top: 8px; right: 10px; border: 0; background: none; font-size: 1.6rem; cursor: pointer; color: #667; }
+.modal-back { margin-bottom: 10px; padding: 4px 10px; font-size: .9rem; }
+.tech-list { display: flex; flex-direction: column; gap: 8px; }
+.tech-item { display: flex; justify-content: space-between; align-items: center; text-align: left; }
+.tier { font-size: .8rem; color: #667; }
+.help p { margin: 8px 0; line-height: 1.6; }
+.help .example { background: #f2f5fa; border-radius: 8px; padding: 8px 10px; }
