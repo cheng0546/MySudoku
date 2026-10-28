@@ -1,12 +1,12 @@
 // 候选数模式技巧：唯一数、区块摒除、数对/三数组、鱼类、Wing、Skyscraper、Kite、Unique Rectangle 等
 (() => {
-  const { UNITS, SEES, PEERS, POP, rowOf, colOf, boxOf, digitsOf, rc, unitName, combos, place, eliminate, rcText, cellHas, CHAIN_MAX_NODES } = SolverKit;
+  const { UNITS, SEES, PEERS, POP, rowOf, colOf, boxOf, digitsOf, rc, unitName, unitKind, L, combos, place, eliminate, rcText, cellHas, CHAIN_MAX_NODES } = SolverKit;
   const FINDERS = {
     naked_single(s) {
       for (let i = 0; i < 81; i++) {
         if (!s.values[i] && POP[s.cands[i]] === 1) {
           const d = digitsOf(s.cands[i])[0];
-          return place(i, d, `该格只剩候选数 ${d}`);
+          return place(i, d, I18n.t("r.naked_single", { d }));
         }
       }
       return null;
@@ -19,7 +19,7 @@
           for (const c of UNITS[u]) {
             if (!s.values[c] && s.cands[c] & (1 << d)) { only = c; n++; }
           }
-          if (n === 1) return place(only, d, `${unitName(u)}中数字 ${d} 只能填在这一格`);
+          if (n === 1) return place(only, d, I18n.t("r.hidden_single", { u: unitName(u), d }));
         }
       }
       return null;
@@ -37,7 +37,7 @@
           for (const [ok, u] of [[sameRow, rowOf(cs[0])], [sameCol, 9 + colOf(cs[0])]]) {
             if (!ok) continue;
             const targets = UNITS[u].filter((c) => boxOf(c) !== b - 18).map((c) => [c, d]);
-            const r = eliminate(s, targets, cs, [d], `${unitName(b)}中数字 ${d} 只出现在${unitName(u)}，该行/列其余格不能是 ${d}`);
+            const r = eliminate(s, targets, cs, [d], I18n.t("r.pointing", { b: unitName(b), u: unitName(u), d }));
             if (r) return r;
           }
         }
@@ -47,7 +47,7 @@
           if (!cs.every((c) => boxOf(c) === boxOf(cs[0]))) continue;
           const b = boxOf(cs[0]);
           const targets = UNITS[18 + b].filter((c) => !cs.includes(c)).map((c) => [c, d]);
-          const r = eliminate(s, targets, cs, [d], `${unitName(u)}中数字 ${d} 只出现在${unitName(18 + b)}，该宫其余格不能是 ${d}`);
+          const r = eliminate(s, targets, cs, [d], I18n.t("r.claiming", { u: unitName(u), b: unitName(18 + b), d }));
           if (r) return r;
         }
       }
@@ -72,7 +72,7 @@
             const keep = (1 << a) | (1 << b);
             const targets = [];
             for (const c of cells) for (const d of digitsOf(s.cands[c] & ~keep)) targets.push([c, d]);
-            const r = eliminate(s, targets, cells, [a, b], `${unitName(u)}中数字 ${a}、${b} 只出现在这两格，这两格的其他候选数可排除`);
+            const r = eliminate(s, targets, cells, [a, b], I18n.t("r.hidden_pair", { u: unitName(u), a, b }));
             if (r) return r;
           }
         }
@@ -103,7 +103,7 @@
             const z = digitsOf(zMask)[0];
             const targets = [];
             for (let c = 0; c < 81; c++) if (c !== p && c !== a && c !== b && SEES[c][a] && SEES[c][b]) targets.push([c, z]);
-            const r = eliminate(s, targets, [p, a, b], [z], `XY-Wing：枢纽 ${rcText(p)}，两翼 ${rcText(a)}、${rcText(b)}，同时看到两翼的格子不能是 ${z}`);
+            const r = eliminate(s, targets, [p, a, b], [z], I18n.t("r.xy_wing", { p: rcText(p), a: rcText(a), b: rcText(b), z }));
             if (r) return r;
           }
         }
@@ -125,7 +125,7 @@
             const z = digitsOf(common)[0];
             const targets = [];
             for (let c = 0; c < 81; c++) if (c !== p && c !== a && c !== b && SEES[c][p] && SEES[c][a] && SEES[c][b]) targets.push([c, z]);
-            const r = eliminate(s, targets, [p, a, b], [z], `XYZ-Wing：枢纽 ${rcText(p)}，两翼 ${rcText(a)}、${rcText(b)}，同时看到三格的格子不能是 ${z}`);
+            const r = eliminate(s, targets, [p, a, b], [z], I18n.t("r.xyz_wing", { p: rcText(p), a: rcText(a), b: rcText(b), z }));
             if (r) return r;
           }
         }
@@ -147,7 +147,7 @@
           if (s.values[c] || group.includes(c)) continue;
           for (const d of digitsOf(s.cands[c] & union)) targets.push([c, d]);
         }
-        return eliminate(s, targets, [...group], digitsOf(union), `${unitName(u)}中 ${group.map(rcText).join("、")} 的候选数只含 ${digitsOf(union).join("、")}，同一${u < 9 ? "行" : u < 18 ? "列" : "宫"}其他格可排除这些数`);
+        return eliminate(s, targets, [...group], digitsOf(union), I18n.t("r.naked_group", { u: unitName(u), cells: L(group.map(rcText)), digits: L(digitsOf(union)), kind: unitKind(u) }));
       });
       if (r) return r;
     }
@@ -181,7 +181,7 @@
           }
           const baseCells = [];
           for (const l of group) for (let cross = 0; cross < 9; cross++) if (crossMask[l] & (1 << cross)) baseCells.push(cellAt(l, cross));
-          return eliminate(s, targets, baseCells, [d], `${FISH_NAMES[n]}：数字 ${d} 在${byRow ? "行" : "列"} ${group.map((l) => l + 1).join("、")} 中只出现在 ${n} 个${byRow ? "列" : "行"}，这些${byRow ? "列" : "行"}的其他格不能是 ${d}`);
+          return eliminate(s, targets, baseCells, [d], I18n.t("r.fish", { name: FISH_NAMES[n], d, line: I18n.t(byRow ? "kind.row" : "kind.col"), lines: L(group.map((l) => l + 1)), n, cross: I18n.t(byRow ? "kind.col" : "kind.row") }));
         });
         if (r) return r;
       }
@@ -224,7 +224,7 @@
           const targets = [];
           for (let c = 0; c < 81; c++) if (c !== E1 && c !== E2 && !base.includes(c) && SEES[c][E1] && SEES[c][E2]) targets.push([c, d]);
           return eliminate(s, targets, [...base, E1, E2], [d],
-            `摩天楼：数字 ${d} 在${unitName(byRow ? l1 : 9 + l1)}、${unitName(byRow ? l2 : 9 + l2)}各只有两处，底部 ${rcText(base[0])}、${rcText(base[1])} 互相看到，屋顶 ${rcText(E1)}、${rcText(E2)} 至少一个是 ${d}，同时看到两个屋顶的格子不能是 ${d}`);
+            I18n.t("r.skyscraper", { d, u1: unitName(byRow ? l1 : 9 + l1), u2: unitName(byRow ? l2 : 9 + l2), b1: rcText(base[0]), b2: rcText(base[1]), e1: rcText(E1), e2: rcText(E2) }));
         });
         if (r) return r;
       }
@@ -250,7 +250,7 @@
             const targets = [];
             for (let t = 0; t < 81; t++) if (![a1, a2, b1, b2].includes(t) && SEES[t][a2] && SEES[t][b2]) targets.push([t, d]);
             const res = eliminate(s, targets, [a1, a2, b1, b2], [d],
-              `双线风筝：数字 ${d} 在第${r + 1}行只有 ${rcText(a1)}、${rcText(a2)}，在第${c + 1}列只有 ${rcText(b1)}、${rcText(b2)}，${rcText(a1)} 与 ${rcText(b1)} 同宫，故 ${rcText(a2)}、${rcText(b2)} 至少一个是 ${d}，同时看到两者的格子不能是 ${d}`);
+              I18n.t("r.kite", { d, r: r + 1, c: c + 1, a1: rcText(a1), a2: rcText(a2), b1: rcText(b1), b2: rcText(b2) }));
             if (res) return res;
           }
         }
@@ -284,7 +284,7 @@
               }
               const base = [...crossesOf(masks[l1]).map((x) => lineCell(byRow, l1, x)), ...crossesOf(masks[l2] & masks[l1]).map((x) => lineCell(byRow, l2, x))];
               const res = eliminate(s, targets, [...base, ...fins], [d],
-                `带鳍 X-Wing：数字 ${d} 在${unitName(byRow ? l1 : 9 + l1)}只有两处，${unitName(byRow ? l2 : 9 + l2)}在同样两处之外多出鳍 ${fins.map(rcText).join("、")}。鳍为真或为假都能推出：与鳍同宫且在${byRow ? "第" + (k + 1) + "列" : "第" + (k + 1) + "行"}的格子不能是 ${d}`);
+                I18n.t("r.finned", { d, u1: unitName(byRow ? l1 : 9 + l1), u2: unitName(byRow ? l2 : 9 + l2), fins: L(fins.map(rcText)), line: I18n.t(byRow ? "unit.col" : "unit.row", { n: k + 1 }) }));
               if (res) return res;
             }
           }
@@ -309,7 +309,7 @@
           if ((s.cands[odd] & pair) !== pair || s.cands[odd] === pair) continue;
           const [a, b] = digitsOf(pair);
           const res = eliminate(s, [[odd, a], [odd, b]], cs, [a, b],
-            `唯一矩形：${cs.map(rcText).join("、")} 构成矩形，其中三格都是 {${a},${b}}。若 ${rcText(odd)} 也取 ${a} 或 ${b}，矩形就有两种填法，与唯一解矛盾，故 ${rcText(odd)} 不能是 ${a}、${b}`);
+            I18n.t("r.ur", { cells: L(cs.map(rcText)), a, b, odd: rcText(odd) }));
           if (res) return res;
         }
       }

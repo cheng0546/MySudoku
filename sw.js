@@ -1,9 +1,17 @@
 // ?????????????,???????
-const CACHE = "mysudoku-v15";
+const CACHE = "mysudoku-v16";
 const ASSETS = [
   "./",
   "index.html",
   "style.css",
+  "i18n/core.js",
+  "i18n/zh.js",
+  "i18n/en.js",
+  "i18n/fr.js",
+  "i18n/content-en-1.js",
+  "i18n/content-en-2.js",
+  "i18n/content-fr-1.js",
+  "i18n/content-fr-2.js",
   "solver/config.js",
   "solver/help.js",
   "solver/core.js",

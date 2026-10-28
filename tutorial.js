@@ -509,7 +509,7 @@ const Tutorial = (() => {
     return svg;
   }
 
-  function diagramBlock(spec) {
+  function diagramBlock(spec, labOverride) {
     const wrap = document.createElement("figure");
     wrap.className = "figure";
     wrap.appendChild(drawDiagram(spec));
@@ -517,11 +517,13 @@ const Tutorial = (() => {
     if (used.length) {
       const legend = document.createElement("div");
       legend.className = "legend";
+      const lab = labOverride || spec.lab;
+      const marks = I18n.getContent().marks;
       for (const m of used) {
         const s = document.createElement("span");
         s.innerHTML = '<i class="swatch"></i>';
         s.firstChild.style.background = MARK_STYLE[m].fill;
-        s.append((spec.lab && spec.lab[m]) || MARK_STYLE[m].label);
+        s.append((lab && lab[m]) || (marks && marks[m]) || MARK_STYLE[m].label);
         legend.appendChild(s);
       }
       wrap.appendChild(legend);
@@ -546,28 +548,30 @@ const Tutorial = (() => {
     const h = document.createElement("h4");
     h.textContent = title;
     container.appendChild(h);
-    for (const [term, text] of terms) container.appendChild(para("term", term + "：", text));
+    for (const [term, text] of terms) container.appendChild(para("term", term + I18n.t("colon"), text));
   }
 
-  // 完整图文教学（供提示弹窗和技巧教学页共用）
+  // 完整图文教学（供提示弹窗和技巧教学页共用）；中文为源文本，其他语言用 I18n 教学内容覆盖
   function renderLesson(container, key) {
-    const help = SudokuSolver.TECHNIQUE_HELP[key];
-    const lesson = LESSONS[key];
-    container.appendChild(para("", "一句话：", help.summary));
-    container.appendChild(para("", "怎么找：", help.how));
-    if (lesson.terms.length) renderTerms(container, "专业词汇", lesson.terms);
+    const c = I18n.getContent();
+    const help = (c.help && c.help[key]) || SudokuSolver.TECHNIQUE_HELP[key];
+    const lesson = (c.lessons && c.lessons[key]) || LESSONS[key];
+    const src = LESSONS[key];
+    container.appendChild(para("", I18n.t("lesson.summary"), help.summary));
+    container.appendChild(para("", I18n.t("lesson.how"), help.how));
+    if (lesson.terms.length) renderTerms(container, I18n.t("lesson.terms"), lesson.terms);
     const h = document.createElement("h4");
-    h.textContent = "图解示范";
+    h.textContent = I18n.t("lesson.demo");
     container.appendChild(h);
     lesson.sections.forEach((s, i) => {
-      container.appendChild(para("step", `${i + 1}. ${s.h}：`, s.t));
-      container.appendChild(diagramBlock(s.d));
+      container.appendChild(para("step", `${i + 1}. ${s.h}${I18n.t("colon")}`, s.t));
+      container.appendChild(diagramBlock(src.sections[i].d, s.lab));
     });
-    if (lesson.tip) container.appendChild(para("example", "小提示：", lesson.tip));
+    if (lesson.tip) container.appendChild(para("example", I18n.t("lesson.tip"), lesson.tip));
   }
 
   function renderBasics(container) {
-    renderTerms(container, "先认识几个基本概念", BASICS);
+    renderTerms(container, I18n.t("lesson.basics"), I18n.getContent().basics || BASICS);
   }
 
   // 根据求解器返回的真实步骤（hint）自动生成文字解释和棋盘高亮图
@@ -591,19 +595,19 @@ const Tutorial = (() => {
     let result;
     if (h.action === "place") {
       map.set(idx(h), P(h.row + 1, h.col + 1, h.value, "target"));
-      result = `在 R${h.row + 1}C${h.col + 1} 填入 ${h.value}。`;
+      result = I18n.t("hint.place", { cell: `R${h.row + 1}C${h.col + 1}`, d: h.value });
     } else {
       for (const e of h.elims) {
         const o = cellAt(idx(e), "target");
         o.x = (o.x || "") + e.value;
       }
-      result = "红色划掉的候选数可以排除：" + h.elims.map((e) => `R${e.row + 1}C${e.col + 1} 的 ${e.value}`).join("、") + "。";
+      result = I18n.t("hint.elim", { list: h.elims.map((e) => I18n.t("hint.elimItem", { cell: `R${e.row + 1}C${e.col + 1}`, d: e.value })).join(I18n.t("sep")) });
     }
-    container.appendChild(para("", "技巧：", `${cfg.name}（${cfg.nameEn}）`));
-    container.appendChild(para("", "推理：", h.reason));
-    container.appendChild(para("", "结论：", result));
+    container.appendChild(para("", I18n.t("hint.technique"), I18n.techFull(h.technique)));
+    container.appendChild(para("", I18n.t("hint.reasoning"), h.reason));
+    container.appendChild(para("", I18n.t("hint.conclusion"), result));
     container.appendChild(diagramBlock(D([...cells, ...map.values()], {
-      lab: { base: "推理所用的格子", chain: "链上的格子", target: h.action === "place" ? "可以填数的格子" : "要排除候选数的格子" },
+      lab: { base: I18n.t("hint.lab.base"), chain: I18n.t("hint.lab.chain"), target: I18n.t(h.action === "place" ? "hint.lab.place" : "hint.lab.elim") },
     })));
   }
 

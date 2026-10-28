@@ -13,6 +13,7 @@ A web-based Sudoku game for learning and improving solving techniques. Every puz
 - Result screen showing the full answer, correctness (wrong cells highlighted), retry, and back to home
 - Local save (localStorage, one game only, no undo history, nothing leaves the device): progress is auto-saved; leaving via Back asks whether to save; the home screen shows a Continue button; submitting clears the save
 - Step-by-step hints: "next step" and "hardest step" are computed by the logic solver from your current board, with a written explanation and an auto-generated highlighted diagram (cells used, candidates to eliminate)
+- Multi-language (中文 / English / Français): picker on the home screen, choice remembered locally, defaults to the browser language; covers UI, all illustrated lessons and the hint reasoning text
 - Keyboard support: `1-9` to fill, `Backspace`/`Delete` to clear, `Ctrl+Z` to undo, arrow keys to move
 
 ## Install as an app (PWA)
@@ -75,6 +76,8 @@ Static sites on Render's free plan are not spun down, so there are no cold start
 | `index.html` | Page structure (home, game, result screens) |
 | `style.css` | Styles |
 | `solver/` | Modular logic solver: `config` (scores, thresholds, grades), `help`, `core`, `patterns`, `chains`, `als`, `forcing`, `analyze` (analysis, classification, rating) |
+| `i18n/` | `core` (I18n engine), `zh`/`en`/`fr` (UI strings, solver reason templates), `content-*` (en/fr lessons and help; zh source stays in `tutorial.js` / `solver/help.js`) |
+| `tools/test-i18n.js` | Node script checking translation completeness and hint text |
 | `sudoku.js` | Puzzle generator and unique-solution backtracking solver |
 | `tools/test-difficulty.js` | Node script to test difficulty generation |
 | `app.js` | UI logic and game state |

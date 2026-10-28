@@ -1,6 +1,6 @@
 // 多分支推理：强制链
 (() => {
-  const { UNITS, SEES, PEERS, POP, rowOf, colOf, boxOf, digitsOf, rc, unitName, combos, place, eliminate, rcText, cellHas, CHAIN_MAX_NODES } = SolverKit;
+  const { UNITS, SEES, PEERS, POP, rowOf, colOf, boxOf, digitsOf, rc, unitName, unitKind, L, combos, place, eliminate, rcText, cellHas, CHAIN_MAX_NODES } = SolverKit;
   // ---------- 强制链（Forcing Chain） ----------
   // 对一个“必有一个为真”的假设集合（双候选格的两个数，或单元内某数字仅剩 2～3 个位置），
   // 分别假设每一种情况并只用唯一候选数/唯一位置向前推导：
@@ -67,13 +67,13 @@
       if (!alive.length) continue;
       if (alive.length === 1) {
         const [c, d] = set[outs.indexOf(alive[0])];
-        return place(c, d, `强制链：${asText(set)} 必有一个成立，其余假设推到矛盾，所以 ${rcText(c)} 填 ${d}`);
+        return place(c, d, I18n.t("r.forcing_a", { set: asText(set), cell: rcText(c), d }));
       }
       for (let i = 0; i < 81; i++) {
         if (s.values[i]) continue;
         const val = alive[0].v[i];
         if (val && alive.every((o) => o.v[i] === val)) {
-          return place(i, val, `强制链：${asText(set)} 必有一个成立；无论哪种假设，只用唯一候选数/唯一位置推下去，${rcText(i)} 都是 ${val}`);
+          return place(i, val, I18n.t("r.forcing_b", { set: asText(set), cell: rcText(i), d: val }));
         }
       }
       const targets = [];
@@ -84,7 +84,7 @@
         }
       }
       const r = eliminate(s, targets, cells, values,
-        `强制链：${asText(set)} 必有一个成立；无论哪种假设，只用唯一候选数/唯一位置推下去，这些候选数都会被排除`);
+        I18n.t("r.forcing_c", { set: asText(set) }));
       if (r) return r;
     }
     return null;
