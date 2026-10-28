@@ -5,9 +5,11 @@ const path = require("path");
 const vm = require("vm");
 
 const root = path.join(__dirname, "..");
-for (const [file, name] of [["solver.js", "SudokuSolver"], ["sudoku.js", "SudokuGen"]]) {
-  vm.runInThisContext(`${fs.readFileSync(path.join(root, file), "utf8")}\nglobalThis.${name} = ${name};`);
+const SOLVER_FILES = ["config", "help", "core", "patterns", "chains", "als", "forcing", "analyze"].map((n) => `solver/${n}.js`);
+for (const [file, name] of [...SOLVER_FILES.map((f) => [f, null]), ["sudoku.js", "SudokuGen"]]) {
+  vm.runInThisContext(`${fs.readFileSync(path.join(root, file), "utf8")}\n${name ? `globalThis.${name} = ${name};` : ""}`);
 }
+vm.runInThisContext("globalThis.SudokuSolver = SudokuSolver;");
 
 const N = +process.argv[2] || 20;
 const { TECHNIQUE_CONFIG, DIFFICULTY_CONFIG, analyzeSudoku, classifyDifficulty } = SudokuSolver;
@@ -15,7 +17,7 @@ let failed = 0;
 const check = (cond, msg) => { if (!cond) { failed++; console.log("  ✗ " + msg); } };
 
 for (const level of DIFFICULTY_CONFIG.order) {
-  const usage = {};
+  const usage = {}, grades = {}, ratings = [];
   let ok = 0, fail = 0, attempts = 0, ms = 0, maxMs = 0, clues = 0, score = 0;
   for (let n = 0; n < N; n++) {
     const r = SudokuGen.generatePuzzle(level);
@@ -40,9 +42,13 @@ for (const level of DIFFICULTY_CONFIG.order) {
     for (const [t, c] of Object.entries(a.techniqueUsage)) usage[t] = (usage[t] || 0) + c;
     clues += r.puzzle.filter(Boolean).length;
     score += a.totalScore;
+    grades[a.grade] = (grades[a.grade] || 0) + 1;
+    ratings.push(a.rating);
+    check(a.rating === a.totalScore + a.complexityScore && a.grade >= 1 && a.grade <= 5, "rating/grade 异常");
   }
+  ratings.sort((x, y) => x - y);
   console.log(`\n[${DIFFICULTY_CONFIG.names[level]}] 成功 ${ok}/${N}，失败 ${fail}，总尝试 ${attempts}，平均耗时 ${(ms / N).toFixed(0)}ms，最长 ${maxMs}ms`);
-  if (ok) console.log(`  平均提示数 ${(clues / ok).toFixed(1)}，平均总分 ${(score / ok).toFixed(0)}`);
+  if (ok) console.log(`  平均提示数 ${(clues / ok).toFixed(1)}，平均总分 ${(score / ok).toFixed(0)}，难度分 ${ratings[0]}~${ratings[ratings.length - 1]}（中位 ${ratings[ratings.length >> 1]}），星级分布 ${[1, 2, 3, 4, 5].map((g) => g + "★=" + (grades[g] || 0)).join(" ")}`);
   console.log("  技巧使用:", Object.keys(TECHNIQUE_CONFIG).filter((t) => usage[t]).map((t) => `${t}=${usage[t]}`).join(" "));
 }
 
