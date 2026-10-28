@@ -488,6 +488,9 @@
   $("lang-select").addEventListener("change", (e) => I18n.setLang(e.target.value));
   I18n.onChange(applyLang);
   applyLang();
+  // 禁止 iOS 捏合缩放与双击放大
+  ["gesturestart", "gesturechange", "gestureend"].forEach((n) => document.addEventListener(n, (e) => e.preventDefault()));
+  document.addEventListener("dblclick", (e) => e.preventDefault());
   for (let d = 1; d <= 9; d++) {
     const b = document.createElement("button");
     b.className = "btn";
