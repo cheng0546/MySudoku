@@ -11,10 +11,15 @@ const SudokuSolver = (() => {
     hidden_pair:       { name: "隐性数对",   nameEn: "Hidden Pair",       tier: 2, score: 5 },
     naked_triple:      { name: "裸三数组",   nameEn: "Naked Triple",      tier: 2, score: 8 },
     x_wing:            { name: "X-Wing",     nameEn: "X-Wing",            tier: 3, score: 12 },
+    skyscraper:        { name: "摩天楼",     nameEn: "Skyscraper",        tier: 3, score: 13 },
+    two_string_kite:   { name: "双线风筝",   nameEn: "Two-String Kite",   tier: 3, score: 13 },
     xy_wing:           { name: "XY-Wing",    nameEn: "XY-Wing",           tier: 3, score: 14 },
+    finned_x_wing:     { name: "带鳍 X-Wing", nameEn: "Finned X-Wing",     tier: 3, score: 15 },
+    unique_rectangle:  { name: "唯一矩形（类型1）", nameEn: "Unique Rectangle Type 1", tier: 3, score: 16 },
     xyz_wing:          { name: "XYZ-Wing",   nameEn: "XYZ-Wing",          tier: 4, score: 18 },
     swordfish:         { name: "Swordfish",  nameEn: "Swordfish",         tier: 4, score: 20 },
     xy_chain:          { name: "XY-Chain",   nameEn: "XY-Chain",          tier: 4, score: 22 },
+    jellyfish:         { name: "Jellyfish",  nameEn: "Jellyfish",         tier: 4, score: 25 },
   };
 
   // 技巧教学文本（展示用，可后续做多语言）
@@ -58,6 +63,31 @@ const SudokuSolver = (() => {
       summary: "一个双候选枢纽格 {X,Y}，两个双候选翼格 {X,Z} 和 {Y,Z} 都能看到枢纽。无论枢纽是什么，Z 都会出现在某个翼格，所以同时能看到两个翼格的格子不能是 Z。",
       how: "1) 找枢纽 {X,Y}。2) 在它同行/列/宫内找翼 {X,Z} 与 {Y,Z}。3) 同时被两个翼看到的格子划掉 Z。",
       example: "枢纽 {1,2}，翼 {1,5} 和 {2,5}：枢纽若是 1，则翼 {1,5} 不能是 1，只能是 5；枢纽若是 2，则翼 {2,5} 只能是 5。两种情况下都有一个翼是 5，所以同时看到两翼的格子不能是 5。",
+    },
+    skyscraper: {
+      summary: "某数字在两行（或两列）里各只有两个候选位置，且其中一处在同一列上，另一处（屋顶）不同。两个屋顶格至少有一个是该数字，同时看到两个屋顶的格子不能是该数字。",
+      how: "1) 找两行，某数字在每行都恰好只有 2 个位置。2) 两行里各有一个位置同列（底部）。3) 另外两个位置是“屋顶”，同时看到两个屋顶的格子划掉该数字。",
+      example: "数字 5 在第 2 行只能放 C3、C8，在第 7 行只能放 C3、C6，底部同在第 3 列。屋顶是 R2C8 和 R7C6，两者至少有一个是 5。",
+    },
+    two_string_kite: {
+      summary: "某数字在一行里只有两个位置，在一列里也只有两个位置，且行上一格与列上一格同宫。风筝的另两端至少有一个是该数字，同时看到两端的格子不能是该数字。",
+      how: "1) 找某数字在一行中恰好 2 个位置，在一列中也恰好 2 个位置。2) 行和列上各取一格，使它们在同一个宫（风筝的“结”）。3) 剩下的两端同时看到的格子划掉该数字。",
+      example: "数字 7 在第 3 行只有 C2、C8，在第 3 列只有 R1、R8；R3C2 与 R1C3 同在第 1 宫。R3C8 与 R8C3 至少一个是 7，同时看到两者的 R8C8 不能是 7。",
+    },
+    finned_x_wing: {
+      summary: "像 X-Wing，但其中一行（列）在矩形的两个位置之外，多了几个同宫的“鳍”。鳍为真时，鳍所在宫内被它看到的格子要排除；鳍为假时就是标准 X-Wing。两种情况都成立的排除就是结论。",
+      how: "1) 找一行只有 2 个位置（基线 A），另一行包含这两个位置并多出鳍（基线 B）。2) 所有鳍必须在同一个宫，且该宫包含基线 B 上的一个矩形角。3) 在这个宫内、矩形该列上、基线以外的格子划掉该数字。",
+      example: "数字 4 在第 1 行只有 C2、C7；第 4 行有 C2、C7 和鳍 R4C3（与 R4C2 同宫）。则 R5C2、R6C2 不能是 4。",
+    },
+    unique_rectangle: {
+      summary: "矩形四格跨两个宫，其中三格都是同一对候选 {a,b}。如果第四格也取 a 或 b，这个矩形就会出现两种互换的填法，违反“唯一解”，所以第四格要划掉 a、b。",
+      how: "1) 找 4 个格子组成矩形，且恰好跨两个宫。2) 三格的候选数完全相同，都是 {a,b}。3) 第四格含 a、b 和其他候选数，把 a、b 划掉。",
+      example: "例：R1C1、R1C4、R2C1 都是 {3,7}，R2C4 是 {3,7,9}，则 R2C4 只能是 9。注意：这个技巧依赖“题目只有唯一解”这一前提，本网站的题目都已验证唯一解。",
+    },
+    jellyfish: {
+      summary: "Swordfish 的四行（列）版本：某数字在四行里的候选位置合起来只占四列，这四列的其他格子不能是该数字。",
+      how: "找数字 X：四行中每行的候选位置都落在同样的四列内（每行 2～4 个）。X 在这四行里必然占满这四列，所以这四列的其他格子划掉 X。",
+      example: "数字 2 在第 1、3、6、8 行的候选都落在第 2、4、7、9 列内，则这四列在其他行的格子都不能是 2。",
     },
     xyz_wing: {
       summary: "枢纽格有三个候选 {X,Y,Z}，两个双候选翼格 {X,Z}、{Y,Z} 都能看到枢纽。无论枢纽取什么，Z 都落在这三格之一，所以同时看到三格的格子不能是 Z。",
@@ -235,6 +265,11 @@ const SudokuSolver = (() => {
 
     x_wing: (s) => fish(s, 2),
     swordfish: (s) => fish(s, 3),
+    jellyfish: (s) => fish(s, 4),
+    skyscraper: (s) => skyscraper(s),
+    two_string_kite: (s) => twoStringKite(s),
+    finned_x_wing: (s) => finnedXWing(s),
+    unique_rectangle: (s) => uniqueRectangle(s),
 
     // XY-Wing：枢纽格 {x,y}，两翼 {x,z}、{y,z}，同时看到两翼的格子排除 z
     xy_wing(s) {
@@ -365,9 +400,138 @@ const SudokuSolver = (() => {
           }
           const baseCells = [];
           for (const l of group) for (let cross = 0; cross < 9; cross++) if (crossMask[l] & (1 << cross)) baseCells.push(cellAt(l, cross));
-          return eliminate(s, targets, baseCells, [d], `${n === 2 ? "X-Wing" : "Swordfish"}：数字 ${d} 在${byRow ? "行" : "列"} ${group.map((l) => l + 1).join("、")} 中只出现在 ${n} 个${byRow ? "列" : "行"}，这些${byRow ? "列" : "行"}的其他格不能是 ${d}`);
+          return eliminate(s, targets, baseCells, [d], `${FISH_NAMES[n]}：数字 ${d} 在${byRow ? "行" : "列"} ${group.map((l) => l + 1).join("、")} 中只出现在 ${n} 个${byRow ? "列" : "行"}，这些${byRow ? "列" : "行"}的其他格不能是 ${d}`);
         });
         if (r) return r;
+      }
+    }
+    return null;
+  }
+
+  const FISH_NAMES = { 2: "X-Wing", 3: "Swordfish", 4: "Jellyfish" };
+
+  // 某数字在各行（byRow）或各列中的候选位置掩码（bit = 交叉方向的下标）
+  function lineMasks(s, d, byRow) {
+    const bit = 1 << d;
+    const masks = new Array(9).fill(0);
+    for (let line = 0; line < 9; line++) {
+      for (let cross = 0; cross < 9; cross++) {
+        const c = byRow ? line * 9 + cross : cross * 9 + line;
+        if (!s.values[c] && s.cands[c] & bit) masks[line] |= 1 << cross;
+      }
+    }
+    return masks;
+  }
+  const lineCell = (byRow, line, cross) => (byRow ? line * 9 + cross : cross * 9 + line);
+  const crossesOf = (mask) => [...Array(9).keys()].filter((i) => mask & (1 << i));
+  const cellHas = (s, c, d) => !s.values[c] && (s.cands[c] & (1 << d)) !== 0;
+
+  // 摩天楼：两条线（行/列）都只有两个候选位置，且其中一端在同一交叉线上，
+  // 另一端（屋顶）不同。两个屋顶格至少一个为真，同时看到两者的格子排除该数。
+  function skyscraper(s) {
+    for (let d = 1; d <= 9; d++) {
+      for (const byRow of [true, false]) {
+        const masks = lineMasks(s, d, byRow);
+        const pairs = [];
+        for (let l = 0; l < 9; l++) if (POP[masks[l]] === 2) pairs.push(l);
+        const r = combos(pairs, 2, ([l1, l2]) => {
+          const shared = masks[l1] & masks[l2];
+          if (POP[shared] !== 1) return null;
+          const e1 = crossesOf(masks[l1] & ~shared)[0], e2 = crossesOf(masks[l2] & ~shared)[0];
+          const x = crossesOf(shared)[0];
+          const E1 = lineCell(byRow, l1, e1), E2 = lineCell(byRow, l2, e2);
+          const base = [lineCell(byRow, l1, x), lineCell(byRow, l2, x)];
+          const targets = [];
+          for (let c = 0; c < 81; c++) if (c !== E1 && c !== E2 && !base.includes(c) && SEES[c][E1] && SEES[c][E2]) targets.push([c, d]);
+          return eliminate(s, targets, [...base, E1, E2], [d],
+            `摩天楼：数字 ${d} 在${unitName(byRow ? l1 : 9 + l1)}、${unitName(byRow ? l2 : 9 + l2)}各只有两处，底部 ${rcText(base[0])}、${rcText(base[1])} 互相看到，屋顶 ${rcText(E1)}、${rcText(E2)} 至少一个是 ${d}，同时看到两个屋顶的格子不能是 ${d}`);
+        });
+        if (r) return r;
+      }
+    }
+    return null;
+  }
+
+  // 双线风筝：一行与一列各只有两个候选位置，两线上各有一格同宫（风筝的“结”），
+  // 另两端至少一个为真，同时看到两端的格子排除该数。
+  function twoStringKite(s) {
+    for (let d = 1; d <= 9; d++) {
+      const rowM = lineMasks(s, d, true), colM = lineMasks(s, d, false);
+      for (let r = 0; r < 9; r++) {
+        if (POP[rowM[r]] !== 2) continue;
+        const rowCells = crossesOf(rowM[r]).map((c) => r * 9 + c);
+        for (let c = 0; c < 9; c++) {
+          if (POP[colM[c]] !== 2) continue;
+          const colCells = crossesOf(colM[c]).map((rr) => rr * 9 + c);
+          for (const a1 of rowCells) for (const b1 of colCells) {
+            if (a1 === b1 || boxOf(a1) !== boxOf(b1)) continue;
+            const a2 = rowCells.find((x) => x !== a1), b2 = colCells.find((x) => x !== b1);
+            if (a2 === b2 || a2 === b1 || b2 === a1) continue;
+            const targets = [];
+            for (let t = 0; t < 81; t++) if (![a1, a2, b1, b2].includes(t) && SEES[t][a2] && SEES[t][b2]) targets.push([t, d]);
+            const res = eliminate(s, targets, [a1, a2, b1, b2], [d],
+              `双线风筝：数字 ${d} 在第${r + 1}行只有 ${rcText(a1)}、${rcText(a2)}，在第${c + 1}列只有 ${rcText(b1)}、${rcText(b2)}，${rcText(a1)} 与 ${rcText(b1)} 同宫，故 ${rcText(a2)}、${rcText(b2)} 至少一个是 ${d}，同时看到两者的格子不能是 ${d}`);
+            if (res) return res;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  // 带鳍 X-Wing：一条基线恰有两个位置，另一条基线在这两处之外还有“鳍”（均在同一宫）。
+  // 鳍为真时，宫内看到鳍的格子排除；鳍为假时即为普通 X-Wing，覆盖线上的格子排除。
+  function finnedXWing(s) {
+    for (let d = 1; d <= 9; d++) {
+      for (const byRow of [true, false]) {
+        const masks = lineMasks(s, d, byRow);
+        for (let l1 = 0; l1 < 9; l1++) {
+          if (POP[masks[l1]] !== 2) continue;
+          for (let l2 = 0; l2 < 9; l2++) {
+            if (l2 === l1 || (masks[l2] & masks[l1]) !== masks[l1]) continue;
+            const finMask = masks[l2] & ~masks[l1];
+            if (!finMask) continue;
+            const fins = crossesOf(finMask).map((x) => lineCell(byRow, l2, x));
+            const box = boxOf(fins[0]);
+            if (fins.some((f) => boxOf(f) !== box)) continue;
+            for (const k of crossesOf(masks[l1])) {
+              if (boxOf(lineCell(byRow, l2, k)) !== box) continue;
+              const targets = [];
+              for (let line = 0; line < 9; line++) {
+                if (line === l1 || line === l2) continue;
+                const c = lineCell(byRow, line, k);
+                if (boxOf(c) === box) targets.push([c, d]);
+              }
+              const base = [...crossesOf(masks[l1]).map((x) => lineCell(byRow, l1, x)), ...crossesOf(masks[l2] & masks[l1]).map((x) => lineCell(byRow, l2, x))];
+              const res = eliminate(s, targets, [...base, ...fins], [d],
+                `带鳍 X-Wing：数字 ${d} 在${unitName(byRow ? l1 : 9 + l1)}只有两处，${unitName(byRow ? l2 : 9 + l2)}在同样两处之外多出鳍 ${fins.map(rcText).join("、")}。鳍为真或为假都能推出：与鳍同宫且在${byRow ? "第" + (k + 1) + "列" : "第" + (k + 1) + "行"}的格子不能是 ${d}`);
+              if (res) return res;
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  // 唯一矩形（类型1）：矩形四格跨两个宫，其中三格都是同一对候选 {a,b}，
+  // 第四格含 a、b 及其他候选。若第四格填 a 或 b 就会出现两种填法（违反唯一解），故排除 a、b。
+  function uniqueRectangle(s) {
+    for (let r1 = 0; r1 < 9; r1++) for (let r2 = r1 + 1; r2 < 9; r2++) {
+      for (let c1 = 0; c1 < 9; c1++) for (let c2 = c1 + 1; c2 < 9; c2++) {
+        const cs = [r1 * 9 + c1, r1 * 9 + c2, r2 * 9 + c1, r2 * 9 + c2];
+        if (cs.some((c) => s.values[c])) continue;
+        if (new Set(cs.map(boxOf)).size !== 2) continue;
+        for (const odd of cs) {
+          const others = cs.filter((c) => c !== odd);
+          const pair = s.cands[others[0]];
+          if (POP[pair] !== 2 || others.some((c) => s.cands[c] !== pair)) continue;
+          if ((s.cands[odd] & pair) !== pair || s.cands[odd] === pair) continue;
+          const [a, b] = digitsOf(pair);
+          const res = eliminate(s, [[odd, a], [odd, b]], cs, [a, b],
+            `唯一矩形：${cs.map(rcText).join("、")} 构成矩形，其中三格都是 {${a},${b}}。若 ${rcText(odd)} 也取 ${a} 或 ${b}，矩形就有两种填法，与唯一解矛盾，故 ${rcText(odd)} 不能是 ${a}、${b}`);
+          if (res) return res;
+        }
       }
     }
     return null;
