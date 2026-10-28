@@ -7,7 +7,7 @@
   let puzzle = [], solution = [];
   let cells = [];      // { value, notes: number[] }
   let selected = -1;
-  let mode = "value";
+  let activeDigit = 0; // 当前选中的数字（0 表示未选）
   let history = [];
   let analysis = null; // 当前题目的逻辑分析结果（含使用到的技巧）
   let genToken = 0;    // 用于忽略已被取消的生成请求
@@ -117,6 +117,8 @@
     cells = newCells();
     history = [];
     selected = -1;
+    activeDigit = 0;
+    renderPad();
     $("game-title").textContent = `难度：${LEVEL_NAMES[level]}`;
     show("game");
     render();
@@ -144,12 +146,13 @@
       if (selected >= 0) {
         const r = Math.floor(i / 9), col = i % 9, sr = Math.floor(selected / 9), sc = selected % 9;
         if (i === selected) el.classList.add("selected");
-        else if (sel.value && c.value === sel.value) el.classList.add("same");
+        else if (c.value && c.value === (activeDigit || sel.value)) el.classList.add("same");
         else if (r === sr || col === sc || (Math.floor(r / 3) === Math.floor(sr / 3) && Math.floor(col / 3) === Math.floor(sc / 3))) el.classList.add("related");
       }
+      if (activeDigit && c.value === activeDigit) el.classList.add("same");
       if (c.value) el.textContent = c.value;
       else if (c.notes.length) el.appendChild(notesEl(c.notes));
-      el.addEventListener("click", () => { selected = i; render(); });
+      el.dataset.i = i;
       board.appendChild(el);
     });
   }
@@ -165,26 +168,39 @@
     return n;
   }
 
-  function input(d) {
-    if (selected < 0 || puzzle[selected]) return;
-    const c = cells[selected];
-    if (mode === "value") {
-      if (c.value === d && !c.notes.length) return;
-      pushHistory();
-      c.value = d;
-      c.notes = []; // 填入确定数字后清除该格所有待定数字
-      cells.forEach((p, j) => {
-        if (isPeer(selected, j)) p.notes = p.notes.filter((n) => n !== d);
-      });
-    } else {
-      if (c.value) return; // 已有确定数字时不能填待定数字
-      pushHistory();
-      const k = c.notes.indexOf(d);
-      if (k >= 0) c.notes.splice(k, 1);
-      else c.notes.push(d);
-      c.notes.sort();
-    }
+  // 点击格子：放置/取消待定数字
+  function placeNote(i, d) {
+    const c = cells[i];
+    if (puzzle[i] || c.value) return; // 已有确定数字的格子不能填待定数字
+    pushHistory();
+    const k = c.notes.indexOf(d);
+    if (k >= 0) c.notes.splice(k, 1);
+    else c.notes.push(d);
+    c.notes.sort();
     render();
+  }
+
+  // 长按格子：放置确定数字，并清除该格待定数字及同行/列/宫的同数字待定标记
+  function placeValue(i, d) {
+    const c = cells[i];
+    if (puzzle[i] || c.value === d) return;
+    pushHistory();
+    c.value = d;
+    c.notes = [];
+    cells.forEach((p, j) => {
+      if (isPeer(i, j)) p.notes = p.notes.filter((n) => n !== d);
+    });
+    render();
+  }
+
+  function setActiveDigit(d) {
+    activeDigit = activeDigit === d ? 0 : d;
+    renderPad();
+    render();
+  }
+
+  function renderPad() {
+    document.querySelectorAll("#pad .btn").forEach((b) => b.classList.toggle("active", +b.textContent === activeDigit));
   }
 
   function undo() {
@@ -232,18 +248,57 @@
 
   document.querySelectorAll("[data-level]").forEach((b) =>
     b.addEventListener("click", () => startGame(b.dataset.level)));
-  document.querySelectorAll(".mode").forEach((b) =>
-    b.addEventListener("click", () => {
-      mode = b.dataset.mode;
-      document.querySelectorAll(".mode").forEach((x) => x.classList.toggle("active", x === b));
-    }));
   for (let d = 1; d <= 9; d++) {
     const b = document.createElement("button");
     b.className = "btn";
     b.textContent = d;
-    b.addEventListener("click", () => input(d));
+    b.addEventListener("click", () => setActiveDigit(d));
     $("pad").appendChild(b);
   }
+
+  // 棋盘手势：点击=待定数字，长按=确定数字（用事件委托，避免重绘后丢失监听）
+  const LONG_PRESS_MS = 450;
+  const MOVE_TOLERANCE = 10;
+  let press = null; // { i, x, y, timer, long }
+  const cellIndex = (e) => {
+    const el = e.target.closest(".cell");
+    return el ? +el.dataset.i : -1;
+  };
+  const cancelPress = () => {
+    if (press) clearTimeout(press.timer);
+    press = null;
+  };
+  const board = $("board");
+  board.addEventListener("pointerdown", (e) => {
+    const i = cellIndex(e);
+    if (i < 0 || (e.pointerType === "mouse" && e.button !== 0)) return;
+    cancelPress();
+    press = { i, x: e.clientX, y: e.clientY, long: false };
+    if (activeDigit) {
+      press.timer = setTimeout(() => {
+        if (!press) return;
+        press.long = true;
+        selected = press.i;
+        const d = activeDigit;
+        if (puzzle[press.i] || cells[press.i].value === d) render();
+        else placeValue(press.i, d);
+      }, LONG_PRESS_MS);
+    }
+  });
+  board.addEventListener("pointermove", (e) => {
+    if (press && Math.hypot(e.clientX - press.x, e.clientY - press.y) > MOVE_TOLERANCE) cancelPress();
+  });
+  board.addEventListener("pointerup", () => {
+    if (!press) return;
+    const { i, long } = press;
+    cancelPress();
+    if (long) return;
+    selected = i;
+    if (activeDigit && !puzzle[i] && !cells[i].value) placeNote(i, activeDigit);
+    else render();
+  });
+  board.addEventListener("pointercancel", cancelPress);
+  board.addEventListener("contextmenu", (e) => e.preventDefault());
   $("undo").addEventListener("click", undo);
   $("clear-cell").addEventListener("click", clearCell);
   $("clear-all").addEventListener("click", clearAll);
@@ -266,7 +321,9 @@
       if (e.key === "Escape") closeModal();
       return;
     }
-    if (/^[1-9]$/.test(e.key)) input(+e.key);
+    if (/^[1-9]$/.test(e.key)) setActiveDigit(+e.key);
+    else if (e.key === " " && selected >= 0 && activeDigit) { placeNote(selected, activeDigit); e.preventDefault(); }
+    else if (e.key === "Enter" && selected >= 0 && activeDigit) placeValue(selected, activeDigit);
     else if (e.key === "Backspace" || e.key === "Delete") clearCell();
     else if ((e.ctrlKey || e.metaKey) && e.key === "z") undo();
     else if (selected >= 0 && e.key.startsWith("Arrow")) {
