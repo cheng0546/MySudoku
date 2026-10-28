@@ -66,6 +66,13 @@ main { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: col
 
 /* 技巧教学 */
 .learn { margin-top: 12px; width: 100%; padding: 14px; font-size: 1.05rem; }
+.resume { margin-top: 20px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.resume[hidden] { display: none; }
+.resume-btn { width: 100%; padding: 14px; font-size: 1.1rem; background: #fff7e0; border-color: #e0b84a; font-weight: 600; }
+.link { border: 0; background: none; color: #667; font-size: .85rem; text-decoration: underline; cursor: pointer; font-family: inherit; padding: 4px; }
+.leave-box { text-align: center; }
+.leave-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+.leave-actions .btn { padding: 12px; }
 .tutorial { text-align: left; }
 .tutorial .sub { text-align: center; }
 .help h4 { margin: 18px 0 6px; color: #3a6fd8; }
