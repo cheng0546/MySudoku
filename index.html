@@ -23,6 +23,7 @@
         <button class="btn primary" data-level="hard">困难</button>
         <button class="btn primary" data-level="expert">专家</button>
       </div>
+      <button class="btn learn" id="open-tutorial">技巧教学</button>
       <p id="home-msg" class="msg" role="alert"></p>
     </section>
 
@@ -41,6 +42,15 @@
         <button class="btn" id="clear-all">重新开始</button>
         <button class="btn primary" id="submit">提交</button>
       </div>
+    </section>
+
+    <section id="tutorial" class="screen" hidden>
+      <div class="topbar">
+        <button class="btn" id="tutorial-back">← 返回</button>
+        <h2 id="tutorial-title">技巧教学</h2>
+        <span></span>
+      </div>
+      <div id="tutorial-body" class="help tutorial"></div>
     </section>
 
     <section id="result" class="screen" hidden>
@@ -63,6 +73,7 @@
     </div>
   </div>
   <script src="solver.js"></script>
+  <script src="tutorial.js"></script>
   <script src="sudoku.js"></script>
   <script src="app.js"></script>
 </body>

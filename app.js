@@ -1,7 +1,7 @@
 (() => {
   const LEVEL_NAMES = SudokuSolver.DIFFICULTY_CONFIG.names;
   const $ = (id) => document.getElementById(id);
-  const screens = { home: $("home"), game: $("game"), result: $("result") };
+  const screens = { home: $("home"), game: $("game"), result: $("result"), tutorial: $("tutorial") };
 
   let level = "easy";
   let puzzle = [], solution = [];
@@ -103,13 +103,59 @@
     openModal(`${cfg.name}（${cfg.nameEn}）`, true);
     const body = $("modal-body");
     body.className = "help";
-    for (const [label, text, cls] of [["原理", help.summary], ["方法", help.how], ["例子", help.example, "example"]]) {
-      const p = document.createElement("p");
-      if (cls) p.className = cls;
-      const strong = document.createElement("strong");
-      strong.textContent = label + "：";
-      p.append(strong, text);
-      body.appendChild(p);
+    Tutorial.renderLesson(body, t);
+    modal.querySelector(".modal-box").scrollTop = 0;
+  }
+
+  // ---------- 技巧教学页（首页入口） ----------
+  const TIER_TITLES = { 1: "Tier 1 基础（简单）", 2: "Tier 2 中级（中等）", 3: "Tier 3 高级（困难）", 4: "Tier 4 专家" };
+
+  function showTutorialList() {
+    $("tutorial-title").textContent = "技巧教学";
+    const body = $("tutorial-body");
+    body.innerHTML = "";
+    const intro = document.createElement("p");
+    intro.className = "sub";
+    intro.textContent = "这里收录了出题时可能用到的全部技巧，点击查看图文讲解。";
+    body.appendChild(intro);
+    Tutorial.renderBasics(body);
+    for (const tier of [1, 2, 3, 4]) {
+      const h = document.createElement("h4");
+      h.textContent = TIER_TITLES[tier];
+      body.appendChild(h);
+      const wrap = document.createElement("div");
+      wrap.className = "tech-list";
+      for (const [key, cfg] of Object.entries(SudokuSolver.TECHNIQUE_CONFIG)) {
+        if (cfg.tier !== tier) continue;
+        const b = document.createElement("button");
+        b.className = "btn tech-item";
+        b.innerHTML = "<span></span><span class=\"tier\">查看 ›</span>";
+        b.children[0].textContent = `${cfg.name}（${cfg.nameEn}）`;
+        b.addEventListener("click", () => showTutorialDetail(key));
+        wrap.appendChild(b);
+      }
+      body.appendChild(wrap);
+    }
+    window.scrollTo(0, 0);
+  }
+
+  function showTutorialDetail(key) {
+    const cfg = SudokuSolver.TECHNIQUE_CONFIG[key];
+    $("tutorial-title").textContent = cfg.name;
+    const body = $("tutorial-body");
+    body.innerHTML = "";
+    Tutorial.renderLesson(body, key);
+    window.scrollTo(0, 0);
+    tutorialKey = key;
+  }
+
+  let tutorialKey = null;
+  function tutorialBack() {
+    if (tutorialKey) {
+      tutorialKey = null;
+      showTutorialList();
+    } else {
+      show("home");
     }
   }
 
@@ -306,6 +352,12 @@
   $("retry").addEventListener("click", resetBoard);
   $("home-btn").addEventListener("click", () => show("home"));
   $("back").addEventListener("click", goHome);
+  $("open-tutorial").addEventListener("click", () => {
+    tutorialKey = null;
+    showTutorialList();
+    show("tutorial");
+  });
+  $("tutorial-back").addEventListener("click", tutorialBack);
   $("hint").addEventListener("click", showTechniqueList);
   $("modal-back").addEventListener("click", showTechniqueList);
   $("modal-close").addEventListener("click", closeModal);

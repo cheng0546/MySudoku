@@ -60,3 +60,16 @@ main { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: col
 #game #board { width: min(100%, calc(100dvh - 330px)); min-width: 240px; margin: auto; }
 #game .pad .btn { padding: clamp(10px, 2.4dvh, 18px) 0; }
 #game .actions { margin-bottom: 0; }
+
+/* 技巧教学 */
+.learn { margin-top: 12px; width: 100%; padding: 14px; font-size: 1.05rem; }
+.tutorial { text-align: left; }
+.tutorial .sub { text-align: center; }
+.help h4 { margin: 18px 0 6px; color: #3a6fd8; }
+.help .term, .help .step { margin: 6px 0; }
+.help .step { margin-top: 14px; }
+.figure { margin: 6px 0 10px; }
+.diagram { display: block; width: 100%; max-width: 360px; margin: 0 auto; border: 1px solid #ccd; border-radius: 6px; background: #fff; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; justify-content: center; font-size: .8rem; color: #556; margin-top: 4px; }
+.swatch { display: inline-block; width: 12px; height: 12px; border: 1px solid #aab; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+.tutorial .tech-list { margin-bottom: 8px; }
